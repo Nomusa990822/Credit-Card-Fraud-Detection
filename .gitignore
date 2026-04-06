@@ -1,0 +1,121 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.py[cod]
+*$py.class
+
+# =========================
+# Testing / Coverage
+# =========================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =========================
+# Virtual Environments
+# =========================
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Jupyter Notebooks
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# Data
+# =========================
+data/raw/*.csv
+data/raw/*.zip
+data/raw/*.parquet
+
+data/processed/*.csv
+data/processed/*.parquet
+
+data/external/*
+
+# =========================
+# Model Artifacts
+# =========================
+artifacts/*.pkl
+artifacts/*.joblib
+artifacts/*.json
+artifacts/*.h5
+artifacts/*.pt
+
+# =========================
+# Reports / Outputs
+# =========================
+reports/figures/*.png
+reports/figures/*.jpg
+reports/metrics/*.json
+reports/metrics/*.csv
+
+# =========================
+# Temporary Files
+# =========================
+*.tmp
+*.temp
+*.bak
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Docker / Build
+# =========================
+*.tar
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# Cache
+# =========================
+.cache/
+
+# =========================
+# Deployment
+# =========================
+.env.local
+.env.production
+
+# =========================
+# Keep Folder Structure
+# =========================
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!artifacts/.gitkeep
+!reports/figures/.gitkeep
+!reports/metrics/.gitkeep
+!scripts/
