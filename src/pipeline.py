@@ -100,7 +100,7 @@ def run_training_pipeline() -> None:
     train_df = preprocess_training_dataframe(train_df)
 
     print("Splitting features and target...")
-    X, y = split_features_target(train_df, target_col="Class")
+    X, y = split_features_target(train_df, target_col="isFraud")
 
     print("Creating train/validation split...")
     X_train, X_valid, y_train, y_valid = split_train_valid(X, y)
