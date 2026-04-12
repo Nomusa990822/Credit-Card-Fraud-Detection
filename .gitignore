@@ -57,19 +57,15 @@ data/external/*
 # =========================
 # Model Artifacts
 # =========================
-artifacts/*.pkl
-artifacts/*.joblib
-artifacts/*.json
-artifacts/*.h5
-artifacts/*.pt
+artifacts/*
+!artifacts/.gitkeep
 
 # =========================
 # Reports / Outputs
 # =========================
-reports/figures/*.png
-reports/figures/*.jpg
-reports/metrics/*.json
-reports/metrics/*.csv
+reports/figures/
+reports/tables/
+reports/metrics/
 
 # =========================
 # Temporary Files
@@ -119,3 +115,15 @@ dist/
 !reports/figures/.gitkeep
 !reports/metrics/.gitkeep
 !scripts/
+
+# Model binaries
+models/*.pkl
+models/*.joblib
+
+# DuckDB
+*.db
+*.duckdb
+
+# OS / editor
+.DS_Store
+.vscode/
