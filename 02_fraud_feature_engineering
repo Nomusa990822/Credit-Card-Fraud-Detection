@@ -1,0 +1,3111 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "da65a017",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009119,
+     "end_time": "2026-04-12T02:39:30.617604+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:30.608485+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Credit Card Fraud Detection — Feature Engineering\n",
+    "\n",
+    "## Project 2: Leakage-Safe Feature Engineering\n",
+    "\n",
+    "This notebook transforms the raw fraud transaction dataset into a machine-learning-ready feature set using a **leakage-safe train/test pipeline**.\n",
+    "\n",
+    "The main principle is:\n",
+    "\n",
+    "- learn all aggregation-based features from the training data only\n",
+    "- apply those learned mappings to the test data\n",
+    "- fit preprocessing steps such as scaling on the training set only\n",
+    "- transform the test set using the fitted training objects\n",
+    "\n",
+    "This ensures that the final feature dataset is realistic and valid for later modeling.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "## Objectives\n",
+    "\n",
+    "This notebook will:\n",
+    "\n",
+    "1. load the predefined training and testing datasets  \n",
+    "2. clean and standardize both datasets consistently  \n",
+    "3. create time, amount, demographic, behavioral, sequential, and contextual features  \n",
+    "4. learn aggregation features from the training data only  \n",
+    "5. apply those learned features to the test data  \n",
+    "6. encode and scale the final dataset in a leakage-safe way  \n",
+    "7. export processed train and test feature files for the next project"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "32ec02b8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:30.635704Z",
+     "iopub.status.busy": "2026-04-12T02:39:30.635322Z",
+     "iopub.status.idle": "2026-04-12T02:39:33.934678Z",
+     "shell.execute_reply": "2026-04-12T02:39:33.933411Z"
+    },
+    "papermill": {
+     "duration": 3.311391,
+     "end_time": "2026-04-12T02:39:33.937087+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:30.625696+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import warnings\n",
+    "warnings.filterwarnings(\"ignore\")\n",
+    "\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "import seaborn as sns\n",
+    "\n",
+    "from sklearn.preprocessing import StandardScaler"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "8208c727",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:33.955276Z",
+     "iopub.status.busy": "2026-04-12T02:39:33.954545Z",
+     "iopub.status.idle": "2026-04-12T02:39:33.961886Z",
+     "shell.execute_reply": "2026-04-12T02:39:33.960829Z"
+    },
+    "papermill": {
+     "duration": 0.018801,
+     "end_time": "2026-04-12T02:39:33.964031+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:33.945230+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# ============================================================\n",
+    "# OCEAN PALETTE\n",
+    "# ============================================================\n",
+    "OCEAN_PALETTE = [\n",
+    "    \"#DFF3F0\",  # ice\n",
+    "    \"#BFEAE5\",  # aqua\n",
+    "    \"#79D0D3\",  # teal\n",
+    "    \"#3E9FBF\",  # ocean\n",
+    "    \"#1F6F8B\",  # azure\n",
+    "    \"#174A7E\",  # cobalt\n",
+    "    \"#0F2F5F\",  # aegean\n",
+    "    \"#081F3F\",  # navy\n",
+    "    \"#04162E\"   # deep\n",
+    "]\n",
+    "\n",
+    "sns.set_theme(style=\"whitegrid\")\n",
+    "plt.rcParams[\"figure.figsize\"] = (10, 5)\n",
+    "plt.rcParams[\"axes.titlesize\"] = 14\n",
+    "plt.rcParams[\"axes.labelsize\"] = 11\n",
+    "plt.rcParams[\"xtick.labelsize\"] = 10\n",
+    "plt.rcParams[\"ytick.labelsize\"] = 10"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "80dba312",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007732,
+     "end_time": "2026-04-12T02:39:33.980690+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:33.972958+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 1. Load Train and Test Datasets\n",
+    "\n",
+    "The dataset already provides separate training and testing files.  \n",
+    "This is important because all aggregation features and transformations must be learned from the training data only, then applied to the test data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "4d8475e8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:34.001342Z",
+     "iopub.status.busy": "2026-04-12T02:39:34.000456Z",
+     "iopub.status.idle": "2026-04-12T02:39:49.231859Z",
+     "shell.execute_reply": "2026-04-12T02:39:49.230626Z"
+    },
+    "papermill": {
+     "duration": 15.245633,
+     "end_time": "2026-04-12T02:39:49.234226+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:33.988593+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train shape: (1296675, 23)\n",
+      "Test shape: (555719, 23)\n"
+     ]
+    }
+   ],
+   "source": [
+    "TRAIN_PATH = \"/kaggle/input/datasets/kaushalnandania/credit-card-fraud-detection/train.csv\"\n",
+    "TEST_PATH = \"/kaggle/input/datasets/kaushalnandania/credit-card-fraud-detection/test.csv\"\n",
+    "\n",
+    "train_df = pd.read_csv(TRAIN_PATH)\n",
+    "test_df = pd.read_csv(TEST_PATH)\n",
+    "\n",
+    "print(\"Train shape:\", train_df.shape)\n",
+    "print(\"Test shape:\", test_df.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "3ce00b14",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:49.253406Z",
+     "iopub.status.busy": "2026-04-12T02:39:49.252591Z",
+     "iopub.status.idle": "2026-04-12T02:39:49.313337Z",
+     "shell.execute_reply": "2026-04-12T02:39:49.312297Z"
+    },
+    "papermill": {
+     "duration": 0.072702,
+     "end_time": "2026-04-12T02:39:49.315333+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.242631+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Unnamed: 0</th>\n",
+       "      <th>trans_date_trans_time</th>\n",
+       "      <th>cc_num</th>\n",
+       "      <th>merchant</th>\n",
+       "      <th>category</th>\n",
+       "      <th>amt</th>\n",
+       "      <th>first</th>\n",
+       "      <th>last</th>\n",
+       "      <th>gender</th>\n",
+       "      <th>street</th>\n",
+       "      <th>...</th>\n",
+       "      <th>lat</th>\n",
+       "      <th>long</th>\n",
+       "      <th>city_pop</th>\n",
+       "      <th>job</th>\n",
+       "      <th>dob</th>\n",
+       "      <th>trans_num</th>\n",
+       "      <th>unix_time</th>\n",
+       "      <th>merch_lat</th>\n",
+       "      <th>merch_long</th>\n",
+       "      <th>is_fraud</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>2019-01-01 00:00:18</td>\n",
+       "      <td>2703186189652095</td>\n",
+       "      <td>fraud_Rippin, Kub and Mann</td>\n",
+       "      <td>misc_net</td>\n",
+       "      <td>4.97</td>\n",
+       "      <td>Jennifer</td>\n",
+       "      <td>Banks</td>\n",
+       "      <td>F</td>\n",
+       "      <td>561 Perry Cove</td>\n",
+       "      <td>...</td>\n",
+       "      <td>36.0788</td>\n",
+       "      <td>-81.1781</td>\n",
+       "      <td>3495</td>\n",
+       "      <td>Psychologist, counselling</td>\n",
+       "      <td>1988-03-09</td>\n",
+       "      <td>0b242abb623afc578575680df30655b9</td>\n",
+       "      <td>1325376018</td>\n",
+       "      <td>36.011293</td>\n",
+       "      <td>-82.048315</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2019-01-01 00:00:44</td>\n",
+       "      <td>630423337322</td>\n",
+       "      <td>fraud_Heller, Gutmann and Zieme</td>\n",
+       "      <td>grocery_pos</td>\n",
+       "      <td>107.23</td>\n",
+       "      <td>Stephanie</td>\n",
+       "      <td>Gill</td>\n",
+       "      <td>F</td>\n",
+       "      <td>43039 Riley Greens Suite 393</td>\n",
+       "      <td>...</td>\n",
+       "      <td>48.8878</td>\n",
+       "      <td>-118.2105</td>\n",
+       "      <td>149</td>\n",
+       "      <td>Special educational needs teacher</td>\n",
+       "      <td>1978-06-21</td>\n",
+       "      <td>1f76529f8574734946361c461b024d99</td>\n",
+       "      <td>1325376044</td>\n",
+       "      <td>49.159047</td>\n",
+       "      <td>-118.186462</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>2</td>\n",
+       "      <td>2019-01-01 00:00:51</td>\n",
+       "      <td>38859492057661</td>\n",
+       "      <td>fraud_Lind-Buckridge</td>\n",
+       "      <td>entertainment</td>\n",
+       "      <td>220.11</td>\n",
+       "      <td>Edward</td>\n",
+       "      <td>Sanchez</td>\n",
+       "      <td>M</td>\n",
+       "      <td>594 White Dale Suite 530</td>\n",
+       "      <td>...</td>\n",
+       "      <td>42.1808</td>\n",
+       "      <td>-112.2620</td>\n",
+       "      <td>4154</td>\n",
+       "      <td>Nature conservation officer</td>\n",
+       "      <td>1962-01-19</td>\n",
+       "      <td>a1a22d70485983eac12b5b88dad1cf95</td>\n",
+       "      <td>1325376051</td>\n",
+       "      <td>43.150704</td>\n",
+       "      <td>-112.154481</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>3</td>\n",
+       "      <td>2019-01-01 00:01:16</td>\n",
+       "      <td>3534093764340240</td>\n",
+       "      <td>fraud_Kutch, Hermiston and Farrell</td>\n",
+       "      <td>gas_transport</td>\n",
+       "      <td>45.00</td>\n",
+       "      <td>Jeremy</td>\n",
+       "      <td>White</td>\n",
+       "      <td>M</td>\n",
+       "      <td>9443 Cynthia Court Apt. 038</td>\n",
+       "      <td>...</td>\n",
+       "      <td>46.2306</td>\n",
+       "      <td>-112.1138</td>\n",
+       "      <td>1939</td>\n",
+       "      <td>Patent attorney</td>\n",
+       "      <td>1967-01-12</td>\n",
+       "      <td>6b849c168bdad6f867558c3793159a81</td>\n",
+       "      <td>1325376076</td>\n",
+       "      <td>47.034331</td>\n",
+       "      <td>-112.561071</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>4</td>\n",
+       "      <td>2019-01-01 00:03:06</td>\n",
+       "      <td>375534208663984</td>\n",
+       "      <td>fraud_Keeling-Crist</td>\n",
+       "      <td>misc_pos</td>\n",
+       "      <td>41.96</td>\n",
+       "      <td>Tyler</td>\n",
+       "      <td>Garcia</td>\n",
+       "      <td>M</td>\n",
+       "      <td>408 Bradley Rest</td>\n",
+       "      <td>...</td>\n",
+       "      <td>38.4207</td>\n",
+       "      <td>-79.4629</td>\n",
+       "      <td>99</td>\n",
+       "      <td>Dance movement psychotherapist</td>\n",
+       "      <td>1986-03-28</td>\n",
+       "      <td>a41d7549acf90789359a9aa5346dcb46</td>\n",
+       "      <td>1325376186</td>\n",
+       "      <td>38.674999</td>\n",
+       "      <td>-78.632459</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>5 rows × 23 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   Unnamed: 0 trans_date_trans_time            cc_num  \\\n",
+       "0           0   2019-01-01 00:00:18  2703186189652095   \n",
+       "1           1   2019-01-01 00:00:44      630423337322   \n",
+       "2           2   2019-01-01 00:00:51    38859492057661   \n",
+       "3           3   2019-01-01 00:01:16  3534093764340240   \n",
+       "4           4   2019-01-01 00:03:06   375534208663984   \n",
+       "\n",
+       "                             merchant       category     amt      first  \\\n",
+       "0          fraud_Rippin, Kub and Mann       misc_net    4.97   Jennifer   \n",
+       "1     fraud_Heller, Gutmann and Zieme    grocery_pos  107.23  Stephanie   \n",
+       "2                fraud_Lind-Buckridge  entertainment  220.11     Edward   \n",
+       "3  fraud_Kutch, Hermiston and Farrell  gas_transport   45.00     Jeremy   \n",
+       "4                 fraud_Keeling-Crist       misc_pos   41.96      Tyler   \n",
+       "\n",
+       "      last gender                        street  ...      lat      long  \\\n",
+       "0    Banks      F                561 Perry Cove  ...  36.0788  -81.1781   \n",
+       "1     Gill      F  43039 Riley Greens Suite 393  ...  48.8878 -118.2105   \n",
+       "2  Sanchez      M      594 White Dale Suite 530  ...  42.1808 -112.2620   \n",
+       "3    White      M   9443 Cynthia Court Apt. 038  ...  46.2306 -112.1138   \n",
+       "4   Garcia      M              408 Bradley Rest  ...  38.4207  -79.4629   \n",
+       "\n",
+       "   city_pop                                job         dob  \\\n",
+       "0      3495          Psychologist, counselling  1988-03-09   \n",
+       "1       149  Special educational needs teacher  1978-06-21   \n",
+       "2      4154        Nature conservation officer  1962-01-19   \n",
+       "3      1939                    Patent attorney  1967-01-12   \n",
+       "4        99     Dance movement psychotherapist  1986-03-28   \n",
+       "\n",
+       "                          trans_num   unix_time  merch_lat  merch_long  \\\n",
+       "0  0b242abb623afc578575680df30655b9  1325376018  36.011293  -82.048315   \n",
+       "1  1f76529f8574734946361c461b024d99  1325376044  49.159047 -118.186462   \n",
+       "2  a1a22d70485983eac12b5b88dad1cf95  1325376051  43.150704 -112.154481   \n",
+       "3  6b849c168bdad6f867558c3793159a81  1325376076  47.034331 -112.561071   \n",
+       "4  a41d7549acf90789359a9aa5346dcb46  1325376186  38.674999  -78.632459   \n",
+       "\n",
+       "   is_fraud  \n",
+       "0         0  \n",
+       "1         0  \n",
+       "2         0  \n",
+       "3         0  \n",
+       "4         0  \n",
+       "\n",
+       "[5 rows x 23 columns]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Unnamed: 0</th>\n",
+       "      <th>trans_date_trans_time</th>\n",
+       "      <th>cc_num</th>\n",
+       "      <th>merchant</th>\n",
+       "      <th>category</th>\n",
+       "      <th>amt</th>\n",
+       "      <th>first</th>\n",
+       "      <th>last</th>\n",
+       "      <th>gender</th>\n",
+       "      <th>street</th>\n",
+       "      <th>...</th>\n",
+       "      <th>lat</th>\n",
+       "      <th>long</th>\n",
+       "      <th>city_pop</th>\n",
+       "      <th>job</th>\n",
+       "      <th>dob</th>\n",
+       "      <th>trans_num</th>\n",
+       "      <th>unix_time</th>\n",
+       "      <th>merch_lat</th>\n",
+       "      <th>merch_long</th>\n",
+       "      <th>is_fraud</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>2020-06-21 12:14:25</td>\n",
+       "      <td>2291163933867244</td>\n",
+       "      <td>fraud_Kirlin and Sons</td>\n",
+       "      <td>personal_care</td>\n",
+       "      <td>2.86</td>\n",
+       "      <td>Jeff</td>\n",
+       "      <td>Elliott</td>\n",
+       "      <td>M</td>\n",
+       "      <td>351 Darlene Green</td>\n",
+       "      <td>...</td>\n",
+       "      <td>33.9659</td>\n",
+       "      <td>-80.9355</td>\n",
+       "      <td>333497</td>\n",
+       "      <td>Mechanical engineer</td>\n",
+       "      <td>1968-03-19</td>\n",
+       "      <td>2da90c7d74bd46a0caf3777415b3ebd3</td>\n",
+       "      <td>1371816865</td>\n",
+       "      <td>33.986391</td>\n",
+       "      <td>-81.200714</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2020-06-21 12:14:33</td>\n",
+       "      <td>3573030041201292</td>\n",
+       "      <td>fraud_Sporer-Keebler</td>\n",
+       "      <td>personal_care</td>\n",
+       "      <td>29.84</td>\n",
+       "      <td>Joanne</td>\n",
+       "      <td>Williams</td>\n",
+       "      <td>F</td>\n",
+       "      <td>3638 Marsh Union</td>\n",
+       "      <td>...</td>\n",
+       "      <td>40.3207</td>\n",
+       "      <td>-110.4360</td>\n",
+       "      <td>302</td>\n",
+       "      <td>Sales professional, IT</td>\n",
+       "      <td>1990-01-17</td>\n",
+       "      <td>324cc204407e99f51b0d6ca0055005e7</td>\n",
+       "      <td>1371816873</td>\n",
+       "      <td>39.450498</td>\n",
+       "      <td>-109.960431</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>2</td>\n",
+       "      <td>2020-06-21 12:14:53</td>\n",
+       "      <td>3598215285024754</td>\n",
+       "      <td>fraud_Swaniawski, Nitzsche and Welch</td>\n",
+       "      <td>health_fitness</td>\n",
+       "      <td>41.28</td>\n",
+       "      <td>Ashley</td>\n",
+       "      <td>Lopez</td>\n",
+       "      <td>F</td>\n",
+       "      <td>9333 Valentine Point</td>\n",
+       "      <td>...</td>\n",
+       "      <td>40.6729</td>\n",
+       "      <td>-73.5365</td>\n",
+       "      <td>34496</td>\n",
+       "      <td>Librarian, public</td>\n",
+       "      <td>1970-10-21</td>\n",
+       "      <td>c81755dbbbea9d5c77f094348a7579be</td>\n",
+       "      <td>1371816893</td>\n",
+       "      <td>40.495810</td>\n",
+       "      <td>-74.196111</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>3</td>\n",
+       "      <td>2020-06-21 12:15:15</td>\n",
+       "      <td>3591919803438423</td>\n",
+       "      <td>fraud_Haley Group</td>\n",
+       "      <td>misc_pos</td>\n",
+       "      <td>60.05</td>\n",
+       "      <td>Brian</td>\n",
+       "      <td>Williams</td>\n",
+       "      <td>M</td>\n",
+       "      <td>32941 Krystal Mill Apt. 552</td>\n",
+       "      <td>...</td>\n",
+       "      <td>28.5697</td>\n",
+       "      <td>-80.8191</td>\n",
+       "      <td>54767</td>\n",
+       "      <td>Set designer</td>\n",
+       "      <td>1987-07-25</td>\n",
+       "      <td>2159175b9efe66dc301f149d3d5abf8c</td>\n",
+       "      <td>1371816915</td>\n",
+       "      <td>28.812398</td>\n",
+       "      <td>-80.883061</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>4</td>\n",
+       "      <td>2020-06-21 12:15:17</td>\n",
+       "      <td>3526826139003047</td>\n",
+       "      <td>fraud_Johnston-Casper</td>\n",
+       "      <td>travel</td>\n",
+       "      <td>3.19</td>\n",
+       "      <td>Nathan</td>\n",
+       "      <td>Massey</td>\n",
+       "      <td>M</td>\n",
+       "      <td>5783 Evan Roads Apt. 465</td>\n",
+       "      <td>...</td>\n",
+       "      <td>44.2529</td>\n",
+       "      <td>-85.0170</td>\n",
+       "      <td>1126</td>\n",
+       "      <td>Furniture designer</td>\n",
+       "      <td>1955-07-06</td>\n",
+       "      <td>57ff021bd3f328f8738bb535c302a31b</td>\n",
+       "      <td>1371816917</td>\n",
+       "      <td>44.959148</td>\n",
+       "      <td>-85.884734</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>5 rows × 23 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   Unnamed: 0 trans_date_trans_time            cc_num  \\\n",
+       "0           0   2020-06-21 12:14:25  2291163933867244   \n",
+       "1           1   2020-06-21 12:14:33  3573030041201292   \n",
+       "2           2   2020-06-21 12:14:53  3598215285024754   \n",
+       "3           3   2020-06-21 12:15:15  3591919803438423   \n",
+       "4           4   2020-06-21 12:15:17  3526826139003047   \n",
+       "\n",
+       "                               merchant        category    amt   first  \\\n",
+       "0                 fraud_Kirlin and Sons   personal_care   2.86    Jeff   \n",
+       "1                  fraud_Sporer-Keebler   personal_care  29.84  Joanne   \n",
+       "2  fraud_Swaniawski, Nitzsche and Welch  health_fitness  41.28  Ashley   \n",
+       "3                     fraud_Haley Group        misc_pos  60.05   Brian   \n",
+       "4                 fraud_Johnston-Casper          travel   3.19  Nathan   \n",
+       "\n",
+       "       last gender                       street  ...      lat      long  \\\n",
+       "0   Elliott      M            351 Darlene Green  ...  33.9659  -80.9355   \n",
+       "1  Williams      F             3638 Marsh Union  ...  40.3207 -110.4360   \n",
+       "2     Lopez      F         9333 Valentine Point  ...  40.6729  -73.5365   \n",
+       "3  Williams      M  32941 Krystal Mill Apt. 552  ...  28.5697  -80.8191   \n",
+       "4    Massey      M     5783 Evan Roads Apt. 465  ...  44.2529  -85.0170   \n",
+       "\n",
+       "   city_pop                     job         dob  \\\n",
+       "0    333497     Mechanical engineer  1968-03-19   \n",
+       "1       302  Sales professional, IT  1990-01-17   \n",
+       "2     34496       Librarian, public  1970-10-21   \n",
+       "3     54767            Set designer  1987-07-25   \n",
+       "4      1126      Furniture designer  1955-07-06   \n",
+       "\n",
+       "                          trans_num   unix_time  merch_lat  merch_long  \\\n",
+       "0  2da90c7d74bd46a0caf3777415b3ebd3  1371816865  33.986391  -81.200714   \n",
+       "1  324cc204407e99f51b0d6ca0055005e7  1371816873  39.450498 -109.960431   \n",
+       "2  c81755dbbbea9d5c77f094348a7579be  1371816893  40.495810  -74.196111   \n",
+       "3  2159175b9efe66dc301f149d3d5abf8c  1371816915  28.812398  -80.883061   \n",
+       "4  57ff021bd3f328f8738bb535c302a31b  1371816917  44.959148  -85.884734   \n",
+       "\n",
+       "   is_fraud  \n",
+       "0         0  \n",
+       "1         0  \n",
+       "2         0  \n",
+       "3         0  \n",
+       "4         0  \n",
+       "\n",
+       "[5 rows x 23 columns]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "display(train_df.head())\n",
+    "display(test_df.head())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b2a1d693",
+   "metadata": {
+    "papermill": {
+     "duration": 0.0085,
+     "end_time": "2026-04-12T02:39:49.332618+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.324118+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 2. Basic Structure Check\n",
+    "\n",
+    "We inspect both datasets to confirm that the schema is consistent before feature engineering begins."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "95b597cb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:49.351706Z",
+     "iopub.status.busy": "2026-04-12T02:39:49.351174Z",
+     "iopub.status.idle": "2026-04-12T02:39:49.357148Z",
+     "shell.execute_reply": "2026-04-12T02:39:49.356122Z"
+    },
+    "papermill": {
+     "duration": 0.018274,
+     "end_time": "2026-04-12T02:39:49.359336+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.341062+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train columns match test columns: True\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"Train columns match test columns:\", list(train_df.columns) == list(test_df.columns))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "9aa209ca",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:49.378957Z",
+     "iopub.status.busy": "2026-04-12T02:39:49.378458Z",
+     "iopub.status.idle": "2026-04-12T02:39:49.390875Z",
+     "shell.execute_reply": "2026-04-12T02:39:49.389820Z"
+    },
+    "papermill": {
+     "duration": 0.024291,
+     "end_time": "2026-04-12T02:39:49.392606+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.368315+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>column</th>\n",
+       "      <th>train_dtype</th>\n",
+       "      <th>test_dtype</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Unnamed: 0</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>trans_date_trans_time</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>cc_num</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>merchant</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>category</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>amt</td>\n",
+       "      <td>float64</td>\n",
+       "      <td>float64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>first</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>7</th>\n",
+       "      <td>last</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>gender</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>street</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>10</th>\n",
+       "      <td>city</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>11</th>\n",
+       "      <td>state</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>12</th>\n",
+       "      <td>zip</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>13</th>\n",
+       "      <td>lat</td>\n",
+       "      <td>float64</td>\n",
+       "      <td>float64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>14</th>\n",
+       "      <td>long</td>\n",
+       "      <td>float64</td>\n",
+       "      <td>float64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>15</th>\n",
+       "      <td>city_pop</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>16</th>\n",
+       "      <td>job</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>17</th>\n",
+       "      <td>dob</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>18</th>\n",
+       "      <td>trans_num</td>\n",
+       "      <td>object</td>\n",
+       "      <td>object</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>19</th>\n",
+       "      <td>unix_time</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>20</th>\n",
+       "      <td>merch_lat</td>\n",
+       "      <td>float64</td>\n",
+       "      <td>float64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>21</th>\n",
+       "      <td>merch_long</td>\n",
+       "      <td>float64</td>\n",
+       "      <td>float64</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>22</th>\n",
+       "      <td>is_fraud</td>\n",
+       "      <td>int64</td>\n",
+       "      <td>int64</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                   column train_dtype test_dtype\n",
+       "0              Unnamed: 0       int64      int64\n",
+       "1   trans_date_trans_time      object     object\n",
+       "2                  cc_num       int64      int64\n",
+       "3                merchant      object     object\n",
+       "4                category      object     object\n",
+       "5                     amt     float64    float64\n",
+       "6                   first      object     object\n",
+       "7                    last      object     object\n",
+       "8                  gender      object     object\n",
+       "9                  street      object     object\n",
+       "10                   city      object     object\n",
+       "11                  state      object     object\n",
+       "12                    zip       int64      int64\n",
+       "13                    lat     float64    float64\n",
+       "14                   long     float64    float64\n",
+       "15               city_pop       int64      int64\n",
+       "16                    job      object     object\n",
+       "17                    dob      object     object\n",
+       "18              trans_num      object     object\n",
+       "19              unix_time       int64      int64\n",
+       "20              merch_lat     float64    float64\n",
+       "21             merch_long     float64    float64\n",
+       "22               is_fraud       int64      int64"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "display(pd.DataFrame({\n",
+    "    \"column\": train_df.columns,\n",
+    "    \"train_dtype\": train_df.dtypes.astype(str).values,\n",
+    "    \"test_dtype\": test_df.dtypes.astype(str).values\n",
+    "}))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "eafe8d16",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009435,
+     "end_time": "2026-04-12T02:39:49.410972+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.401537+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 3. Initial Cleaning\n",
+    "\n",
+    "This section applies the same basic cleaning logic to both datasets:\n",
+    "\n",
+    "- remove index-like columns if present\n",
+    "- parse date columns\n",
+    "- standardize string formatting"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "4c600948",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:49.431478Z",
+     "iopub.status.busy": "2026-04-12T02:39:49.430456Z",
+     "iopub.status.idle": "2026-04-12T02:39:49.437404Z",
+     "shell.execute_reply": "2026-04-12T02:39:49.436240Z"
+    },
+    "papermill": {
+     "duration": 0.019412,
+     "end_time": "2026-04-12T02:39:49.439400+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.419988+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def initial_cleaning(df):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    drop_cols = [col for col in df.columns if \"unnamed\" in col.lower()]\n",
+    "    if drop_cols:\n",
+    "        df = df.drop(columns=drop_cols)\n",
+    "\n",
+    "    df[\"trans_date_trans_time\"] = pd.to_datetime(df[\"trans_date_trans_time\"], errors=\"coerce\")\n",
+    "    df[\"dob\"] = pd.to_datetime(df[\"dob\"], errors=\"coerce\")\n",
+    "\n",
+    "    string_cols = df.select_dtypes(include=\"object\").columns.tolist()\n",
+    "    for col in string_cols:\n",
+    "        df[col] = df[col].astype(str).str.strip()\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "f7e6ac1a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:49.459605Z",
+     "iopub.status.busy": "2026-04-12T02:39:49.459113Z",
+     "iopub.status.idle": "2026-04-12T02:39:55.389811Z",
+     "shell.execute_reply": "2026-04-12T02:39:55.388878Z"
+    },
+    "papermill": {
+     "duration": 5.943554,
+     "end_time": "2026-04-12T02:39:55.391979+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:49.448425+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = initial_cleaning(train_df)\n",
+    "test_df = initial_cleaning(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7e000720",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008807,
+     "end_time": "2026-04-12T02:39:55.410022+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:55.401215+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 4. Base Time and Demographic Features\n",
+    "\n",
+    "These features are created directly from raw columns and can safely be engineered independently on both training and testing data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "42ea155b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:55.429531Z",
+     "iopub.status.busy": "2026-04-12T02:39:55.429044Z",
+     "iopub.status.idle": "2026-04-12T02:39:55.436760Z",
+     "shell.execute_reply": "2026-04-12T02:39:55.435819Z"
+    },
+    "papermill": {
+     "duration": 0.019888,
+     "end_time": "2026-04-12T02:39:55.438693+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:55.418805+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_base_features(df):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    df[\"trans_hour\"] = df[\"trans_date_trans_time\"].dt.hour\n",
+    "    df[\"trans_day\"] = df[\"trans_date_trans_time\"].dt.day\n",
+    "    df[\"trans_dayofweek\"] = df[\"trans_date_trans_time\"].dt.dayofweek\n",
+    "    df[\"trans_month\"] = df[\"trans_date_trans_time\"].dt.month\n",
+    "    df[\"trans_year\"] = df[\"trans_date_trans_time\"].dt.year\n",
+    "    df[\"trans_date\"] = df[\"trans_date_trans_time\"].dt.date\n",
+    "\n",
+    "    df[\"is_weekend\"] = df[\"trans_dayofweek\"].isin([5, 6]).astype(int)\n",
+    "    df[\"is_night_transaction\"] = ((df[\"trans_hour\"] >= 22) | (df[\"trans_hour\"] <= 3)).astype(int)\n",
+    "\n",
+    "    df[\"age\"] = ((df[\"trans_date_trans_time\"] - df[\"dob\"]).dt.days / 365.25).astype(float)\n",
+    "    df[\"age\"] = df[\"age\"].clip(lower=0)\n",
+    "\n",
+    "    df[\"age_band\"] = pd.cut(\n",
+    "        df[\"age\"],\n",
+    "        bins=[0, 25, 35, 45, 55, 65, 120],\n",
+    "        labels=[\"Under 25\", \"25-34\", \"35-44\", \"45-54\", \"55-64\", \"65+\"],\n",
+    "        right=False\n",
+    "    )\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "3a0b99f6",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:55.458835Z",
+     "iopub.status.busy": "2026-04-12T02:39:55.457887Z",
+     "iopub.status.idle": "2026-04-12T02:39:57.223698Z",
+     "shell.execute_reply": "2026-04-12T02:39:57.222663Z"
+    },
+    "papermill": {
+     "duration": 1.778355,
+     "end_time": "2026-04-12T02:39:57.225974+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:55.447619+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = add_base_features(train_df)\n",
+    "test_df = add_base_features(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "89b62b1e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009885,
+     "end_time": "2026-04-12T02:39:57.244839+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:57.234954+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 5. Amount and Population Features\n",
+    "\n",
+    "These features transform highly skewed variables and add scale-aware context."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "aeafedcc",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:57.265436Z",
+     "iopub.status.busy": "2026-04-12T02:39:57.264913Z",
+     "iopub.status.idle": "2026-04-12T02:39:57.286834Z",
+     "shell.execute_reply": "2026-04-12T02:39:57.285929Z"
+    },
+    "papermill": {
+     "duration": 0.034074,
+     "end_time": "2026-04-12T02:39:57.288548+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:57.254474+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_amount_population_features(df, high_value_threshold=None):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    df[\"log_amt\"] = np.log1p(df[\"amt\"])\n",
+    "    df[\"amt_squared\"] = df[\"amt\"] ** 2\n",
+    "\n",
+    "    if high_value_threshold is None:\n",
+    "        high_value_threshold = df[\"amt\"].quantile(0.95)\n",
+    "\n",
+    "    df[\"is_high_value_txn\"] = (df[\"amt\"] >= high_value_threshold).astype(int)\n",
+    "\n",
+    "    df[\"log_city_pop\"] = np.log1p(df[\"city_pop\"])\n",
+    "\n",
+    "    return df, high_value_threshold"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "8df4e5aa",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:57.309371Z",
+     "iopub.status.busy": "2026-04-12T02:39:57.308579Z",
+     "iopub.status.idle": "2026-04-12T02:39:58.596138Z",
+     "shell.execute_reply": "2026-04-12T02:39:58.595052Z"
+    },
+    "papermill": {
+     "duration": 1.300401,
+     "end_time": "2026-04-12T02:39:58.598160+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:57.297759+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train-derived high-value threshold: 196.31\n"
+     ]
+    }
+   ],
+   "source": [
+    "train_df, high_value_threshold = add_amount_population_features(train_df)\n",
+    "test_df, _ = add_amount_population_features(test_df, high_value_threshold=high_value_threshold)\n",
+    "\n",
+    "print(\"Train-derived high-value threshold:\", round(high_value_threshold, 2))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "17c2eff7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008675,
+     "end_time": "2026-04-12T02:39:58.615845+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:58.607170+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 6. Band Features Learned from Training Data\n",
+    "\n",
+    "Quantile bands must be defined from the training data, then applied to the test data using the same cut points."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "652db733",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:58.635641Z",
+     "iopub.status.busy": "2026-04-12T02:39:58.634784Z",
+     "iopub.status.idle": "2026-04-12T02:39:58.716982Z",
+     "shell.execute_reply": "2026-04-12T02:39:58.715909Z"
+    },
+    "papermill": {
+     "duration": 0.094693,
+     "end_time": "2026-04-12T02:39:58.719299+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:58.624606+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# Amount quantile edges from train\n",
+    "amt_bins = np.unique(train_df[\"amt\"].quantile([0, 0.2, 0.4, 0.6, 0.8, 1.0]).values)\n",
+    "if len(amt_bins) < 6:\n",
+    "    amt_bins = np.unique(np.linspace(train_df[\"amt\"].min(), train_df[\"amt\"].max(), 6))\n",
+    "\n",
+    "# City population quantile edges from train\n",
+    "city_pop_bins = np.unique(train_df[\"city_pop\"].quantile([0, 0.2, 0.4, 0.6, 0.8, 1.0]).values)\n",
+    "if len(city_pop_bins) < 6:\n",
+    "    city_pop_bins = np.unique(np.linspace(train_df[\"city_pop\"].min(), train_df[\"city_pop\"].max(), 6))\n",
+    "\n",
+    "amt_labels = [\"Very Low\", \"Low\", \"Medium\", \"High\", \"Very High\"]\n",
+    "city_pop_labels = [\"Very Low\", \"Low\", \"Medium\", \"High\", \"Very High\"]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "06d0b83d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:58.739486Z",
+     "iopub.status.busy": "2026-04-12T02:39:58.738674Z",
+     "iopub.status.idle": "2026-04-12T02:39:58.744935Z",
+     "shell.execute_reply": "2026-04-12T02:39:58.743806Z"
+    },
+    "papermill": {
+     "duration": 0.018545,
+     "end_time": "2026-04-12T02:39:58.746830+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:58.728285+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def apply_band_features(df, amt_bins, city_pop_bins):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    df[\"amt_band\"] = pd.cut(\n",
+    "        df[\"amt\"],\n",
+    "        bins=amt_bins,\n",
+    "        labels=amt_labels[:len(amt_bins)-1],\n",
+    "        include_lowest=True,\n",
+    "        duplicates=\"drop\"\n",
+    "    )\n",
+    "\n",
+    "    df[\"city_pop_band\"] = pd.cut(\n",
+    "        df[\"city_pop\"],\n",
+    "        bins=city_pop_bins,\n",
+    "        labels=city_pop_labels[:len(city_pop_bins)-1],\n",
+    "        include_lowest=True,\n",
+    "        duplicates=\"drop\"\n",
+    "    )\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "7a7fbee1",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:58.766811Z",
+     "iopub.status.busy": "2026-04-12T02:39:58.766434Z",
+     "iopub.status.idle": "2026-04-12T02:39:59.379598Z",
+     "shell.execute_reply": "2026-04-12T02:39:59.378803Z"
+    },
+    "papermill": {
+     "duration": 0.625516,
+     "end_time": "2026-04-12T02:39:59.381680+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:58.756164+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = apply_band_features(train_df, amt_bins, city_pop_bins)\n",
+    "test_df = apply_band_features(test_df, amt_bins, city_pop_bins)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cfc236b1",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00862,
+     "end_time": "2026-04-12T02:39:59.399583+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:59.390963+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 7. Prepare Sequential Ordering\n",
+    "\n",
+    "Sequential customer features are computed separately within train and test to avoid crossing dataset boundaries."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "0c229099",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:39:59.419454Z",
+     "iopub.status.busy": "2026-04-12T02:39:59.419103Z",
+     "iopub.status.idle": "2026-04-12T02:40:02.859639Z",
+     "shell.execute_reply": "2026-04-12T02:40:02.858574Z"
+    },
+    "papermill": {
+     "duration": 3.453446,
+     "end_time": "2026-04-12T02:40:02.861749+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:39:59.408303+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = train_df.sort_values([\"cc_num\", \"trans_date_trans_time\"]).reset_index(drop=True)\n",
+    "test_df = test_df.sort_values([\"cc_num\", \"trans_date_trans_time\"]).reset_index(drop=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "16d8636e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009003,
+     "end_time": "2026-04-12T02:40:02.879844+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:02.870841+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 8. Sequential Customer Features\n",
+    "\n",
+    "These features capture changes relative to previous transactions and customer-level behavioral history within each dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "43a36f82",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:02.900527Z",
+     "iopub.status.busy": "2026-04-12T02:40:02.899644Z",
+     "iopub.status.idle": "2026-04-12T02:40:02.907408Z",
+     "shell.execute_reply": "2026-04-12T02:40:02.906392Z"
+    },
+    "papermill": {
+     "duration": 0.020334,
+     "end_time": "2026-04-12T02:40:02.909312+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:02.888978+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_sequential_customer_features(df):\n",
+    "    df = df.copy()\n",
+    "    group_cc = df.groupby(\"cc_num\")\n",
+    "\n",
+    "    df[\"prev_amt\"] = group_cc[\"amt\"].shift(1)\n",
+    "    df[\"prev_trans_time\"] = group_cc[\"trans_date_trans_time\"].shift(1)\n",
+    "\n",
+    "    df[\"amt_change_from_prev\"] = df[\"amt\"] - df[\"prev_amt\"]\n",
+    "    df[\"amt_ratio_to_prev\"] = df[\"amt\"] / (df[\"prev_amt\"] + 1e-6)\n",
+    "\n",
+    "    df[\"time_since_last_txn_sec\"] = (\n",
+    "        df[\"trans_date_trans_time\"] - df[\"prev_trans_time\"]\n",
+    "    ).dt.total_seconds()\n",
+    "\n",
+    "    df[\"cust_txn_count\"] = group_cc.cumcount() + 1\n",
+    "    df[\"cust_avg_amt\"] = group_cc[\"amt\"].transform(\"mean\")\n",
+    "    df[\"cust_median_amt\"] = group_cc[\"amt\"].transform(\"median\")\n",
+    "    df[\"cust_std_amt\"] = group_cc[\"amt\"].transform(\"std\").fillna(0)\n",
+    "\n",
+    "    df[\"amt_vs_cust_mean\"] = df[\"amt\"] - df[\"cust_avg_amt\"]\n",
+    "    df[\"amt_vs_cust_median\"] = df[\"amt\"] - df[\"cust_median_amt\"]\n",
+    "\n",
+    "    df[\"zscore_amt_within_customer\"] = np.where(\n",
+    "        df[\"cust_std_amt\"] > 0,\n",
+    "        (df[\"amt\"] - df[\"cust_avg_amt\"]) / df[\"cust_std_amt\"],\n",
+    "        0\n",
+    "    )\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "7ee6d2c9",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:02.930298Z",
+     "iopub.status.busy": "2026-04-12T02:40:02.929847Z",
+     "iopub.status.idle": "2026-04-12T02:40:03.857397Z",
+     "shell.execute_reply": "2026-04-12T02:40:03.856569Z"
+    },
+    "papermill": {
+     "duration": 0.940373,
+     "end_time": "2026-04-12T02:40:03.859527+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:02.919154+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = add_sequential_customer_features(train_df)\n",
+    "test_df = add_sequential_customer_features(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f9058a0c",
+   "metadata": {
+    "papermill": {
+     "duration": 0.010026,
+     "end_time": "2026-04-12T02:40:03.880205+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:03.870179+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 9. Same-Day Customer Activity Features\n",
+    "\n",
+    "These features detect burst behavior within the same day."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "55d6844b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:03.902950Z",
+     "iopub.status.busy": "2026-04-12T02:40:03.902533Z",
+     "iopub.status.idle": "2026-04-12T02:40:03.908228Z",
+     "shell.execute_reply": "2026-04-12T02:40:03.907376Z"
+    },
+    "papermill": {
+     "duration": 0.019873,
+     "end_time": "2026-04-12T02:40:03.910215+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:03.890342+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_same_day_features(df):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    cust_day_group = df.groupby([\"cc_num\", \"trans_date\"])\n",
+    "    df[\"customer_txn_same_day\"] = cust_day_group[\"amt\"].transform(\"count\")\n",
+    "    df[\"customer_amt_same_day\"] = cust_day_group[\"amt\"].transform(\"sum\")\n",
+    "    df[\"customer_avg_same_day\"] = cust_day_group[\"amt\"].transform(\"mean\")\n",
+    "    df[\"amt_share_of_day_total\"] = df[\"amt\"] / (df[\"customer_amt_same_day\"] + 1e-6)\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "1e37ed50",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:03.929844Z",
+     "iopub.status.busy": "2026-04-12T02:40:03.929463Z",
+     "iopub.status.idle": "2026-04-12T02:40:05.449826Z",
+     "shell.execute_reply": "2026-04-12T02:40:05.448938Z"
+    },
+    "papermill": {
+     "duration": 1.532511,
+     "end_time": "2026-04-12T02:40:05.451808+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:03.919297+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = add_same_day_features(train_df)\n",
+    "test_df = add_same_day_features(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6fbe615f",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008746,
+     "end_time": "2026-04-12T02:40:05.469550+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:05.460804+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 10. Learn Aggregation Features from Training Data Only\n",
+    "\n",
+    "This is the core leakage-safe step.\n",
+    "\n",
+    "All entity-level summaries are learned from the training data only, then applied to both train and test:\n",
+    "\n",
+    "- merchant-level features\n",
+    "- category-level features\n",
+    "- state-level features\n",
+    "- city-level features"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "9513ab95",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:05.488832Z",
+     "iopub.status.busy": "2026-04-12T02:40:05.488498Z",
+     "iopub.status.idle": "2026-04-12T02:40:05.496266Z",
+     "shell.execute_reply": "2026-04-12T02:40:05.495223Z"
+    },
+    "papermill": {
+     "duration": 0.019773,
+     "end_time": "2026-04-12T02:40:05.498046+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:05.478273+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def build_train_mappings(train_df):\n",
+    "    merchant_map = (\n",
+    "        train_df.groupby(\"merchant\")\n",
+    "        .agg(\n",
+    "            merchant_txn_count=(\"is_fraud\", \"count\"),\n",
+    "            merchant_fraud_rate=(\"is_fraud\", \"mean\"),\n",
+    "            merchant_avg_amt=(\"amt\", \"mean\"),\n",
+    "            merchant_median_amt=(\"amt\", \"median\")\n",
+    "        )\n",
+    "        .reset_index()\n",
+    "    )\n",
+    "\n",
+    "    category_map = (\n",
+    "        train_df.groupby(\"category\")\n",
+    "        .agg(\n",
+    "            category_txn_count=(\"is_fraud\", \"count\"),\n",
+    "            category_fraud_rate=(\"is_fraud\", \"mean\"),\n",
+    "            category_avg_amt=(\"amt\", \"mean\"),\n",
+    "            category_median_amt=(\"amt\", \"median\")\n",
+    "        )\n",
+    "        .reset_index()\n",
+    "    )\n",
+    "\n",
+    "    state_map = (\n",
+    "        train_df.groupby(\"state\")\n",
+    "        .agg(\n",
+    "            state_txn_count=(\"is_fraud\", \"count\"),\n",
+    "            state_fraud_rate=(\"is_fraud\", \"mean\"),\n",
+    "            state_avg_amt=(\"amt\", \"mean\"),\n",
+    "            state_median_amt=(\"amt\", \"median\")\n",
+    "        )\n",
+    "        .reset_index()\n",
+    "    )\n",
+    "\n",
+    "    city_map = (\n",
+    "        train_df.groupby(\"city\")\n",
+    "        .agg(\n",
+    "            city_txn_count=(\"is_fraud\", \"count\"),\n",
+    "            city_fraud_rate=(\"is_fraud\", \"mean\"),\n",
+    "            city_avg_amt=(\"amt\", \"mean\"),\n",
+    "            city_median_amt=(\"amt\", \"median\")\n",
+    "        )\n",
+    "        .reset_index()\n",
+    "    )\n",
+    "\n",
+    "    return merchant_map, category_map, state_map, city_map"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "d97db016",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:05.518879Z",
+     "iopub.status.busy": "2026-04-12T02:40:05.518008Z",
+     "iopub.status.idle": "2026-04-12T02:40:06.182078Z",
+     "shell.execute_reply": "2026-04-12T02:40:06.180835Z"
+    },
+    "papermill": {
+     "duration": 0.676679,
+     "end_time": "2026-04-12T02:40:06.184343+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:05.507664+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "merchant_map, category_map, state_map, city_map = build_train_mappings(train_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "46ee72b7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008847,
+     "end_time": "2026-04-12T02:40:06.202630+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:06.193783+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 11. Apply Train-Learned Mappings to Both Datasets\n",
+    "\n",
+    "The learned train summaries are merged into both train and test.\n",
+    "\n",
+    "Unseen categories or merchants in the test set are filled using train-based global defaults."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "537db469",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:06.223172Z",
+     "iopub.status.busy": "2026-04-12T02:40:06.222626Z",
+     "iopub.status.idle": "2026-04-12T02:40:06.753077Z",
+     "shell.execute_reply": "2026-04-12T02:40:06.751825Z"
+    },
+    "papermill": {
+     "duration": 0.543991,
+     "end_time": "2026-04-12T02:40:06.755757+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:06.211766+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "global_defaults = {\n",
+    "    \"merchant_txn_count\": train_df[\"merchant\"].value_counts().mean(),\n",
+    "    \"merchant_fraud_rate\": train_df[\"is_fraud\"].mean(),\n",
+    "    \"merchant_avg_amt\": train_df[\"amt\"].mean(),\n",
+    "    \"merchant_median_amt\": train_df[\"amt\"].median(),\n",
+    "\n",
+    "    \"category_txn_count\": train_df[\"category\"].value_counts().mean(),\n",
+    "    \"category_fraud_rate\": train_df[\"is_fraud\"].mean(),\n",
+    "    \"category_avg_amt\": train_df[\"amt\"].mean(),\n",
+    "    \"category_median_amt\": train_df[\"amt\"].median(),\n",
+    "\n",
+    "    \"state_txn_count\": train_df[\"state\"].value_counts().mean(),\n",
+    "    \"state_fraud_rate\": train_df[\"is_fraud\"].mean(),\n",
+    "    \"state_avg_amt\": train_df[\"amt\"].mean(),\n",
+    "    \"state_median_amt\": train_df[\"amt\"].median(),\n",
+    "\n",
+    "    \"city_txn_count\": train_df[\"city\"].value_counts().mean(),\n",
+    "    \"city_fraud_rate\": train_df[\"is_fraud\"].mean(),\n",
+    "    \"city_avg_amt\": train_df[\"amt\"].mean(),\n",
+    "    \"city_median_amt\": train_df[\"amt\"].median()\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "0cb2f100",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:06.776583Z",
+     "iopub.status.busy": "2026-04-12T02:40:06.776086Z",
+     "iopub.status.idle": "2026-04-12T02:40:06.783233Z",
+     "shell.execute_reply": "2026-04-12T02:40:06.781985Z"
+    },
+    "papermill": {
+     "duration": 0.020446,
+     "end_time": "2026-04-12T02:40:06.785344+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:06.764898+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def apply_train_mappings(df, merchant_map, category_map, state_map, city_map, defaults):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    df = df.merge(merchant_map, on=\"merchant\", how=\"left\")\n",
+    "    df = df.merge(category_map, on=\"category\", how=\"left\")\n",
+    "    df = df.merge(state_map, on=\"state\", how=\"left\")\n",
+    "    df = df.merge(city_map, on=\"city\", how=\"left\")\n",
+    "\n",
+    "    for col, val in defaults.items():\n",
+    "        if col in df.columns:\n",
+    "            df[col] = df[col].fillna(val)\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "ec4f5835",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:06.805904Z",
+     "iopub.status.busy": "2026-04-12T02:40:06.805074Z",
+     "iopub.status.idle": "2026-04-12T02:40:12.938599Z",
+     "shell.execute_reply": "2026-04-12T02:40:12.937561Z"
+    },
+    "papermill": {
+     "duration": 6.146371,
+     "end_time": "2026-04-12T02:40:12.940820+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:06.794449+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = apply_train_mappings(train_df, merchant_map, category_map, state_map, city_map, global_defaults)\n",
+    "test_df = apply_train_mappings(test_df, merchant_map, category_map, state_map, city_map, global_defaults)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6d8ae2b4",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00877,
+     "end_time": "2026-04-12T02:40:12.959172+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:12.950402+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 12. Interaction Features\n",
+    "\n",
+    "These features combine amount, timing, and learned risk context."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "b44050ab",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:12.979399Z",
+     "iopub.status.busy": "2026-04-12T02:40:12.979070Z",
+     "iopub.status.idle": "2026-04-12T02:40:12.985511Z",
+     "shell.execute_reply": "2026-04-12T02:40:12.984413Z"
+    },
+    "papermill": {
+     "duration": 0.019462,
+     "end_time": "2026-04-12T02:40:12.987385+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:12.967923+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_interaction_features(df):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    df[\"merchant_risk_amt\"] = df[\"amt\"] * df[\"merchant_fraud_rate\"]\n",
+    "    df[\"category_risk_amt\"] = df[\"amt\"] * df[\"category_fraud_rate\"]\n",
+    "    df[\"state_risk_amt\"] = df[\"amt\"] * df[\"state_fraud_rate\"]\n",
+    "\n",
+    "    df[\"night_amt\"] = df[\"amt\"] * df[\"is_night_transaction\"]\n",
+    "    df[\"night_log_amt\"] = df[\"log_amt\"] * df[\"is_night_transaction\"]\n",
+    "    df[\"night_merchant_risk\"] = df[\"merchant_fraud_rate\"] * df[\"is_night_transaction\"]\n",
+    "    df[\"night_category_risk\"] = df[\"category_fraud_rate\"] * df[\"is_night_transaction\"]\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "3f21b738",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:13.008210Z",
+     "iopub.status.busy": "2026-04-12T02:40:13.007097Z",
+     "iopub.status.idle": "2026-04-12T02:40:14.236429Z",
+     "shell.execute_reply": "2026-04-12T02:40:14.235495Z"
+    },
+    "papermill": {
+     "duration": 1.241915,
+     "end_time": "2026-04-12T02:40:14.238818+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:12.996903+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = add_interaction_features(train_df)\n",
+    "test_df = add_interaction_features(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "15abbda0",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008626,
+     "end_time": "2026-04-12T02:40:14.256586+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:14.247960+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 13. Distance Feature\n",
+    "\n",
+    "A simple customer-to-merchant distance proxy is added from latitude/longitude coordinates."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "d941bdd7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:14.276536Z",
+     "iopub.status.busy": "2026-04-12T02:40:14.275696Z",
+     "iopub.status.idle": "2026-04-12T02:40:14.282048Z",
+     "shell.execute_reply": "2026-04-12T02:40:14.280820Z"
+    },
+    "papermill": {
+     "duration": 0.019139,
+     "end_time": "2026-04-12T02:40:14.284335+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:14.265196+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def add_distance_feature(df):\n",
+    "    df = df.copy()\n",
+    "    df[\"distance_cust_merchant\"] = np.sqrt(\n",
+    "        (df[\"lat\"] - df[\"merch_lat\"]) ** 2 + (df[\"long\"] - df[\"merch_long\"]) ** 2\n",
+    "    )\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "07e7a778",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:14.304880Z",
+     "iopub.status.busy": "2026-04-12T02:40:14.304329Z",
+     "iopub.status.idle": "2026-04-12T02:40:15.445453Z",
+     "shell.execute_reply": "2026-04-12T02:40:15.444295Z"
+    },
+    "papermill": {
+     "duration": 1.154174,
+     "end_time": "2026-04-12T02:40:15.447674+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:14.293500+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = add_distance_feature(train_df)\n",
+    "test_df = add_distance_feature(test_df)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d8dcc113",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008889,
+     "end_time": "2026-04-12T02:40:15.467319+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:15.458430+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 14. Fill Missing Values from Feature Creation\n",
+    "\n",
+    "Sequential and derived features can create nulls, especially for first transactions.\n",
+    "These are filled consistently in both train and test."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "56e56784",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:15.487070Z",
+     "iopub.status.busy": "2026-04-12T02:40:15.486644Z",
+     "iopub.status.idle": "2026-04-12T02:40:15.492041Z",
+     "shell.execute_reply": "2026-04-12T02:40:15.491029Z"
+    },
+    "papermill": {
+     "duration": 0.017779,
+     "end_time": "2026-04-12T02:40:15.494048+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:15.476269+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "fill_zero_cols = [\n",
+    "    \"prev_amt\",\n",
+    "    \"amt_change_from_prev\",\n",
+    "    \"amt_ratio_to_prev\",\n",
+    "    \"time_since_last_txn_sec\",\n",
+    "    \"amt_vs_cust_mean\",\n",
+    "    \"amt_vs_cust_median\",\n",
+    "    \"zscore_amt_within_customer\",\n",
+    "    \"distance_cust_merchant\",\n",
+    "    \"night_amt\",\n",
+    "    \"night_log_amt\",\n",
+    "    \"night_merchant_risk\",\n",
+    "    \"night_category_risk\",\n",
+    "    \"merchant_risk_amt\",\n",
+    "    \"category_risk_amt\",\n",
+    "    \"state_risk_amt\"\n",
+    "]\n",
+    "\n",
+    "band_cols = [\"age_band\", \"amt_band\", \"city_pop_band\"]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "5c5ab9b7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:15.514061Z",
+     "iopub.status.busy": "2026-04-12T02:40:15.513661Z",
+     "iopub.status.idle": "2026-04-12T02:40:15.520074Z",
+     "shell.execute_reply": "2026-04-12T02:40:15.519249Z"
+    },
+    "papermill": {
+     "duration": 0.01866,
+     "end_time": "2026-04-12T02:40:15.521906+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:15.503246+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def finalize_missing_values(df, fill_zero_cols, band_cols):\n",
+    "    df = df.copy()\n",
+    "\n",
+    "    for col in fill_zero_cols:\n",
+    "        if col in df.columns:\n",
+    "            df[col] = df[col].fillna(0)\n",
+    "\n",
+    "    for col in band_cols:\n",
+    "        if col in df.columns:\n",
+    "            df[col] = df[col].astype(str).fillna(\"Unknown\")\n",
+    "\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "id": "4d32bad8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:15.542086Z",
+     "iopub.status.busy": "2026-04-12T02:40:15.541414Z",
+     "iopub.status.idle": "2026-04-12T02:40:18.200846Z",
+     "shell.execute_reply": "2026-04-12T02:40:18.199478Z"
+    },
+    "papermill": {
+     "duration": 2.671758,
+     "end_time": "2026-04-12T02:40:18.202958+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:15.531200+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "train_df = finalize_missing_values(train_df, fill_zero_cols, band_cols)\n",
+    "test_df = finalize_missing_values(test_df, fill_zero_cols, band_cols)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e96cb281",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009154,
+     "end_time": "2026-04-12T02:40:18.221373+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:18.212219+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 15. Remove Identifiers and Non-Modeling Columns\n",
+    "\n",
+    "We now remove columns that should not be used directly for modeling."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "id": "31f0e998",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:18.241463Z",
+     "iopub.status.busy": "2026-04-12T02:40:18.240593Z",
+     "iopub.status.idle": "2026-04-12T02:40:19.989338Z",
+     "shell.execute_reply": "2026-04-12T02:40:19.988347Z"
+    },
+    "papermill": {
+     "duration": 1.760837,
+     "end_time": "2026-04-12T02:40:19.991332+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:18.230495+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Train modeling shape: (1296675, 63)\n",
+      "Test modeling shape: (555719, 63)\n"
+     ]
+    }
+   ],
+   "source": [
+    "drop_model_cols = [\n",
+    "    \"trans_date_trans_time\",\n",
+    "    \"trans_date\",\n",
+    "    \"dob\",\n",
+    "    \"first\",\n",
+    "    \"last\",\n",
+    "    \"street\",\n",
+    "    \"city\",\n",
+    "    \"state\",\n",
+    "    \"zip\",\n",
+    "    \"job\",\n",
+    "    \"merchant\",\n",
+    "    \"trans_num\",\n",
+    "    \"unix_time\",\n",
+    "    \"cc_num\",\n",
+    "    \"prev_trans_time\",\n",
+    "    \"trans_day_name\"\n",
+    "]\n",
+    "\n",
+    "existing_drop_train = [col for col in drop_model_cols if col in train_df.columns]\n",
+    "existing_drop_test = [col for col in drop_model_cols if col in test_df.columns]\n",
+    "\n",
+    "train_model = train_df.drop(columns=existing_drop_train).copy()\n",
+    "test_model = test_df.drop(columns=existing_drop_test).copy()\n",
+    "\n",
+    "print(\"Train modeling shape:\", train_model.shape)\n",
+    "print(\"Test modeling shape:\", test_model.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e5c180af",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008626,
+     "end_time": "2026-04-12T02:40:20.009088+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:20.000462+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 16. Split Features and Target"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "id": "4ee45261",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:20.028856Z",
+     "iopub.status.busy": "2026-04-12T02:40:20.028068Z",
+     "iopub.status.idle": "2026-04-12T02:40:20.753692Z",
+     "shell.execute_reply": "2026-04-12T02:40:20.752632Z"
+    },
+    "papermill": {
+     "duration": 0.737774,
+     "end_time": "2026-04-12T02:40:20.755642+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:20.017868+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "X_train shape: (1296675, 62)\n",
+      "X_test shape: (555719, 62)\n"
+     ]
+    }
+   ],
+   "source": [
+    "target_col = \"is_fraud\"\n",
+    "\n",
+    "X_train = train_model.drop(columns=[target_col]).copy()\n",
+    "y_train = train_model[target_col].copy()\n",
+    "\n",
+    "X_test = test_model.drop(columns=[target_col]).copy()\n",
+    "y_test = test_model[target_col].copy()\n",
+    "\n",
+    "print(\"X_train shape:\", X_train.shape)\n",
+    "print(\"X_test shape:\", X_test.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6a53a4f9",
+   "metadata": {
+    "papermill": {
+     "duration": 0.0087,
+     "end_time": "2026-04-12T02:40:20.773314+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:20.764614+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 17. One-Hot Encode Categorical Variables\n",
+    "\n",
+    "Categorical variables are encoded using the training set structure, then the test set is aligned to the same columns."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "id": "5a9ed2c7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:20.794372Z",
+     "iopub.status.busy": "2026-04-12T02:40:20.793000Z",
+     "iopub.status.idle": "2026-04-12T02:40:20.880206Z",
+     "shell.execute_reply": "2026-04-12T02:40:20.879032Z"
+    },
+    "papermill": {
+     "duration": 0.099872,
+     "end_time": "2026-04-12T02:40:20.882176+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:20.782304+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Categorical columns:\n",
+      "['category', 'gender', 'age_band', 'amt_band', 'city_pop_band']\n"
+     ]
+    }
+   ],
+   "source": [
+    "categorical_cols = X_train.select_dtypes(include=[\"object\", \"category\"]).columns.tolist()\n",
+    "\n",
+    "print(\"Categorical columns:\")\n",
+    "print(categorical_cols)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "id": "0de96fe8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:20.902687Z",
+     "iopub.status.busy": "2026-04-12T02:40:20.902123Z",
+     "iopub.status.idle": "2026-04-12T02:40:22.641377Z",
+     "shell.execute_reply": "2026-04-12T02:40:22.640364Z"
+    },
+    "papermill": {
+     "duration": 1.751754,
+     "end_time": "2026-04-12T02:40:22.643407+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:20.891653+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Encoded train shape: (1296675, 89)\n",
+      "Encoded test shape: (555719, 89)\n"
+     ]
+    }
+   ],
+   "source": [
+    "X_train_encoded = pd.get_dummies(X_train, columns=categorical_cols, drop_first=False)\n",
+    "X_test_encoded = pd.get_dummies(X_test, columns=categorical_cols, drop_first=False)\n",
+    "\n",
+    "# Align test to train columns\n",
+    "X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join=\"left\", axis=1, fill_value=0)\n",
+    "\n",
+    "print(\"Encoded train shape:\", X_train_encoded.shape)\n",
+    "print(\"Encoded test shape:\", X_test_encoded.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2b41170f",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009899,
+     "end_time": "2026-04-12T02:40:22.662865+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:22.652966+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 18. Scale Numerical Features Using Training Data Only\n",
+    "\n",
+    "The scaler is fit on the training set and applied to both train and test.\n",
+    "\n",
+    "Binary variables are left unchanged."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "id": "30d04f96",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:22.683862Z",
+     "iopub.status.busy": "2026-04-12T02:40:22.683342Z",
+     "iopub.status.idle": "2026-04-12T02:40:28.442201Z",
+     "shell.execute_reply": "2026-04-12T02:40:28.440813Z"
+    },
+    "papermill": {
+     "duration": 5.772077,
+     "end_time": "2026-04-12T02:40:28.444201+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:22.672124+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Scaled columns: 54\n",
+      "Binary-like columns: 3\n"
+     ]
+    }
+   ],
+   "source": [
+    "numeric_cols = X_train_encoded.select_dtypes(include=[np.number]).columns.tolist()\n",
+    "binary_like_cols = [col for col in numeric_cols if X_train_encoded[col].dropna().isin([0, 1]).all()]\n",
+    "scale_cols = [col for col in numeric_cols if col not in binary_like_cols]\n",
+    "\n",
+    "print(\"Scaled columns:\", len(scale_cols))\n",
+    "print(\"Binary-like columns:\", len(binary_like_cols))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "id": "47286030",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:28.464876Z",
+     "iopub.status.busy": "2026-04-12T02:40:28.464347Z",
+     "iopub.status.idle": "2026-04-12T02:40:31.009727Z",
+     "shell.execute_reply": "2026-04-12T02:40:31.008602Z"
+    },
+    "papermill": {
+     "duration": 2.558321,
+     "end_time": "2026-04-12T02:40:31.012112+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:28.453791+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "scaler = StandardScaler()\n",
+    "\n",
+    "X_train_scaled = X_train_encoded.copy()\n",
+    "X_test_scaled = X_test_encoded.copy()\n",
+    "\n",
+    "X_train_scaled[scale_cols] = scaler.fit_transform(X_train_scaled[scale_cols])\n",
+    "X_test_scaled[scale_cols] = scaler.transform(X_test_scaled[scale_cols])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9c451b6f",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009214,
+     "end_time": "2026-04-12T02:40:31.031068+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:31.021854+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 19. Final Dataset Checks"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "id": "5c8b21a4",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:31.052188Z",
+     "iopub.status.busy": "2026-04-12T02:40:31.051641Z",
+     "iopub.status.idle": "2026-04-12T02:40:31.302800Z",
+     "shell.execute_reply": "2026-04-12T02:40:31.301522Z"
+    },
+    "papermill": {
+     "duration": 0.264407,
+     "end_time": "2026-04-12T02:40:31.305209+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:31.040802+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "X_train_scaled shape: (1296675, 89)\n",
+      "X_test_scaled shape: (555719, 89)\n",
+      "y_train shape: (1296675,)\n",
+      "y_test shape: (555719,)\n",
+      "\n",
+      "Missing values in X_train_scaled: 0\n",
+      "Missing values in X_test_scaled: 0\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"X_train_scaled shape:\", X_train_scaled.shape)\n",
+    "print(\"X_test_scaled shape:\", X_test_scaled.shape)\n",
+    "print(\"y_train shape:\", y_train.shape)\n",
+    "print(\"y_test shape:\", y_test.shape)\n",
+    "\n",
+    "print(\"\\nMissing values in X_train_scaled:\", X_train_scaled.isna().sum().sum())\n",
+    "print(\"Missing values in X_test_scaled:\", X_test_scaled.isna().sum().sum())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "id": "5200cf71",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:31.327343Z",
+     "iopub.status.busy": "2026-04-12T02:40:31.325877Z",
+     "iopub.status.idle": "2026-04-12T02:40:31.568071Z",
+     "shell.execute_reply": "2026-04-12T02:40:31.567122Z"
+    },
+    "papermill": {
+     "duration": 0.255284,
+     "end_time": "2026-04-12T02:40:31.570129+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:31.314845+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>amt</th>\n",
+       "      <th>log_amt</th>\n",
+       "      <th>trans_hour</th>\n",
+       "      <th>trans_month</th>\n",
+       "      <th>is_night_transaction</th>\n",
+       "      <th>age</th>\n",
+       "      <th>prev_amt</th>\n",
+       "      <th>amt_change_from_prev</th>\n",
+       "      <th>amt_ratio_to_prev</th>\n",
+       "      <th>time_since_last_txn_sec</th>\n",
+       "      <th>cust_txn_count</th>\n",
+       "      <th>cust_avg_amt</th>\n",
+       "      <th>customer_txn_same_day</th>\n",
+       "      <th>customer_amt_same_day</th>\n",
+       "      <th>merchant_fraud_rate</th>\n",
+       "      <th>category_fraud_rate</th>\n",
+       "      <th>state_fraud_rate</th>\n",
+       "      <th>city_fraud_rate</th>\n",
+       "      <th>night_amt</th>\n",
+       "      <th>distance_cust_merchant</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>-0.393479</td>\n",
+       "      <td>-1.101895</td>\n",
+       "      <td>-0.118052</td>\n",
+       "      <td>-1.504564</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.754614</td>\n",
+       "      <td>-0.438576</td>\n",
+       "      <td>-0.000104</td>\n",
+       "      <td>-0.182448</td>\n",
+       "      <td>-0.684942</td>\n",
+       "      <td>-1.340893</td>\n",
+       "      <td>-0.738148</td>\n",
+       "      <td>-1.251179</td>\n",
+       "      <td>-0.720690</td>\n",
+       "      <td>0.661329</td>\n",
+       "      <td>1.615782</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>1.829833</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>-0.108604</td>\n",
+       "      <td>0.352401</td>\n",
+       "      <td>-0.704750</td>\n",
+       "      <td>-1.504564</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.754456</td>\n",
+       "      <td>-0.393194</td>\n",
+       "      <td>0.207711</td>\n",
+       "      <td>0.055589</td>\n",
+       "      <td>0.831408</td>\n",
+       "      <td>-1.339418</td>\n",
+       "      <td>-0.738148</td>\n",
+       "      <td>-0.312352</td>\n",
+       "      <td>-0.327115</td>\n",
+       "      <td>-0.437569</td>\n",
+       "      <td>-0.204031</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>0.812593</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>0.073162</td>\n",
+       "      <td>0.687375</td>\n",
+       "      <td>-0.704750</td>\n",
+       "      <td>-1.504564</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.754456</td>\n",
+       "      <td>-0.108104</td>\n",
+       "      <td>0.132494</td>\n",
+       "      <td>-0.131767</td>\n",
+       "      <td>-0.681587</td>\n",
+       "      <td>-1.337942</td>\n",
+       "      <td>-0.738148</td>\n",
+       "      <td>-0.312352</td>\n",
+       "      <td>-0.327115</td>\n",
+       "      <td>-0.221052</td>\n",
+       "      <td>-0.204031</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>-1.759114</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>-0.221818</td>\n",
+       "      <td>0.034277</td>\n",
+       "      <td>-0.118052</td>\n",
+       "      <td>-1.504564</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.754456</td>\n",
+       "      <td>0.073799</td>\n",
+       "      <td>-0.215290</td>\n",
+       "      <td>-0.168593</td>\n",
+       "      <td>-0.392948</td>\n",
+       "      <td>-1.336467</td>\n",
+       "      <td>-0.738148</td>\n",
+       "      <td>-0.312352</td>\n",
+       "      <td>-0.327115</td>\n",
+       "      <td>-0.396913</td>\n",
+       "      <td>-0.684808</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>0.087880</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>-0.269287</td>\n",
+       "      <td>-0.151117</td>\n",
+       "      <td>0.028622</td>\n",
+       "      <td>-1.504564</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.754456</td>\n",
+       "      <td>-0.221403</td>\n",
+       "      <td>-0.034732</td>\n",
+       "      <td>-0.156910</td>\n",
+       "      <td>-0.643753</td>\n",
+       "      <td>-1.334992</td>\n",
+       "      <td>-0.738148</td>\n",
+       "      <td>-0.312352</td>\n",
+       "      <td>-0.327115</td>\n",
+       "      <td>-0.970872</td>\n",
+       "      <td>-0.779142</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>0.350221</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "        amt   log_amt  trans_hour  trans_month  is_night_transaction  \\\n",
+       "0 -0.393479 -1.101895   -0.118052    -1.504564                     0   \n",
+       "1 -0.108604  0.352401   -0.704750    -1.504564                     0   \n",
+       "2  0.073162  0.687375   -0.704750    -1.504564                     0   \n",
+       "3 -0.221818  0.034277   -0.118052    -1.504564                     0   \n",
+       "4 -0.269287 -0.151117    0.028622    -1.504564                     0   \n",
+       "\n",
+       "        age  prev_amt  amt_change_from_prev  amt_ratio_to_prev  \\\n",
+       "0 -0.754614 -0.438576             -0.000104          -0.182448   \n",
+       "1 -0.754456 -0.393194              0.207711           0.055589   \n",
+       "2 -0.754456 -0.108104              0.132494          -0.131767   \n",
+       "3 -0.754456  0.073799             -0.215290          -0.168593   \n",
+       "4 -0.754456 -0.221403             -0.034732          -0.156910   \n",
+       "\n",
+       "   time_since_last_txn_sec  cust_txn_count  cust_avg_amt  \\\n",
+       "0                -0.684942       -1.340893     -0.738148   \n",
+       "1                 0.831408       -1.339418     -0.738148   \n",
+       "2                -0.681587       -1.337942     -0.738148   \n",
+       "3                -0.392948       -1.336467     -0.738148   \n",
+       "4                -0.643753       -1.334992     -0.738148   \n",
+       "\n",
+       "   customer_txn_same_day  customer_amt_same_day  merchant_fraud_rate  \\\n",
+       "0              -1.251179              -0.720690             0.661329   \n",
+       "1              -0.312352              -0.327115            -0.437569   \n",
+       "2              -0.312352              -0.327115            -0.221052   \n",
+       "3              -0.312352              -0.327115            -0.396913   \n",
+       "4              -0.312352              -0.327115            -0.970872   \n",
+       "\n",
+       "   category_fraud_rate  state_fraud_rate  city_fraud_rate  night_amt  \\\n",
+       "0             1.615782          -0.03321         0.007671  -0.213256   \n",
+       "1            -0.204031          -0.03321         0.007671  -0.213256   \n",
+       "2            -0.204031          -0.03321         0.007671  -0.213256   \n",
+       "3            -0.684808          -0.03321         0.007671  -0.213256   \n",
+       "4            -0.779142          -0.03321         0.007671  -0.213256   \n",
+       "\n",
+       "   distance_cust_merchant  \n",
+       "0                1.829833  \n",
+       "1                0.812593  \n",
+       "2               -1.759114  \n",
+       "3                0.087880  \n",
+       "4                0.350221  "
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>amt</th>\n",
+       "      <th>log_amt</th>\n",
+       "      <th>trans_hour</th>\n",
+       "      <th>trans_month</th>\n",
+       "      <th>is_night_transaction</th>\n",
+       "      <th>age</th>\n",
+       "      <th>prev_amt</th>\n",
+       "      <th>amt_change_from_prev</th>\n",
+       "      <th>amt_ratio_to_prev</th>\n",
+       "      <th>time_since_last_txn_sec</th>\n",
+       "      <th>cust_txn_count</th>\n",
+       "      <th>cust_avg_amt</th>\n",
+       "      <th>customer_txn_same_day</th>\n",
+       "      <th>customer_amt_same_day</th>\n",
+       "      <th>merchant_fraud_rate</th>\n",
+       "      <th>category_fraud_rate</th>\n",
+       "      <th>state_fraud_rate</th>\n",
+       "      <th>city_fraud_rate</th>\n",
+       "      <th>night_amt</th>\n",
+       "      <th>distance_cust_merchant</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0.338762</td>\n",
+       "      <td>1.008269</td>\n",
+       "      <td>0.028622</td>\n",
+       "      <td>-0.041592</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.670089</td>\n",
+       "      <td>-0.438576</td>\n",
+       "      <td>-0.000104</td>\n",
+       "      <td>-0.182448</td>\n",
+       "      <td>-0.684942</td>\n",
+       "      <td>-1.340893</td>\n",
+       "      <td>-0.198428</td>\n",
+       "      <td>-0.938237</td>\n",
+       "      <td>-0.314274</td>\n",
+       "      <td>-0.742128</td>\n",
+       "      <td>-0.779142</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>-1.388549</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0.050955</td>\n",
+       "      <td>0.653410</td>\n",
+       "      <td>0.468646</td>\n",
+       "      <td>-0.041592</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.670089</td>\n",
+       "      <td>0.339600</td>\n",
+       "      <td>-0.210057</td>\n",
+       "      <td>-0.161859</td>\n",
+       "      <td>-0.431858</td>\n",
+       "      <td>-1.339418</td>\n",
+       "      <td>-0.198428</td>\n",
+       "      <td>-0.938237</td>\n",
+       "      <td>-0.314274</td>\n",
+       "      <td>-0.366331</td>\n",
+       "      <td>-0.493928</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>0.259297</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>-0.031819</td>\n",
+       "      <td>0.511820</td>\n",
+       "      <td>-0.851424</td>\n",
+       "      <td>-0.041592</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.669932</td>\n",
+       "      <td>0.051576</td>\n",
+       "      <td>-0.060487</td>\n",
+       "      <td>-0.155284</td>\n",
+       "      <td>0.496221</td>\n",
+       "      <td>-1.337942</td>\n",
+       "      <td>-0.198428</td>\n",
+       "      <td>-0.938237</td>\n",
+       "      <td>-0.418393</td>\n",
+       "      <td>-0.004701</td>\n",
+       "      <td>-0.204031</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>1.621532</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>0.108467</td>\n",
+       "      <td>0.738487</td>\n",
+       "      <td>0.321971</td>\n",
+       "      <td>-0.041592</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.669932</td>\n",
+       "      <td>-0.031260</td>\n",
+       "      <td>0.102234</td>\n",
+       "      <td>-0.138493</td>\n",
+       "      <td>-0.110197</td>\n",
+       "      <td>-1.336467</td>\n",
+       "      <td>-0.198428</td>\n",
+       "      <td>-0.938237</td>\n",
+       "      <td>-0.418393</td>\n",
+       "      <td>-0.320594</td>\n",
+       "      <td>-0.684808</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>-0.486863</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0.484474</td>\n",
+       "      <td>1.140497</td>\n",
+       "      <td>-0.118052</td>\n",
+       "      <td>-0.041592</td>\n",
+       "      <td>0</td>\n",
+       "      <td>-0.669774</td>\n",
+       "      <td>0.109131</td>\n",
+       "      <td>0.274192</td>\n",
+       "      <td>-0.127302</td>\n",
+       "      <td>0.905704</td>\n",
+       "      <td>-1.334992</td>\n",
+       "      <td>-0.198428</td>\n",
+       "      <td>0.000590</td>\n",
+       "      <td>-0.383791</td>\n",
+       "      <td>-0.361878</td>\n",
+       "      <td>-0.627098</td>\n",
+       "      <td>-0.03321</td>\n",
+       "      <td>0.007671</td>\n",
+       "      <td>-0.213256</td>\n",
+       "      <td>-1.090085</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "        amt   log_amt  trans_hour  trans_month  is_night_transaction  \\\n",
+       "0  0.338762  1.008269    0.028622    -0.041592                     0   \n",
+       "1  0.050955  0.653410    0.468646    -0.041592                     0   \n",
+       "2 -0.031819  0.511820   -0.851424    -0.041592                     0   \n",
+       "3  0.108467  0.738487    0.321971    -0.041592                     0   \n",
+       "4  0.484474  1.140497   -0.118052    -0.041592                     0   \n",
+       "\n",
+       "        age  prev_amt  amt_change_from_prev  amt_ratio_to_prev  \\\n",
+       "0 -0.670089 -0.438576             -0.000104          -0.182448   \n",
+       "1 -0.670089  0.339600             -0.210057          -0.161859   \n",
+       "2 -0.669932  0.051576             -0.060487          -0.155284   \n",
+       "3 -0.669932 -0.031260              0.102234          -0.138493   \n",
+       "4 -0.669774  0.109131              0.274192          -0.127302   \n",
+       "\n",
+       "   time_since_last_txn_sec  cust_txn_count  cust_avg_amt  \\\n",
+       "0                -0.684942       -1.340893     -0.198428   \n",
+       "1                -0.431858       -1.339418     -0.198428   \n",
+       "2                 0.496221       -1.337942     -0.198428   \n",
+       "3                -0.110197       -1.336467     -0.198428   \n",
+       "4                 0.905704       -1.334992     -0.198428   \n",
+       "\n",
+       "   customer_txn_same_day  customer_amt_same_day  merchant_fraud_rate  \\\n",
+       "0              -0.938237              -0.314274            -0.742128   \n",
+       "1              -0.938237              -0.314274            -0.366331   \n",
+       "2              -0.938237              -0.418393            -0.004701   \n",
+       "3              -0.938237              -0.418393            -0.320594   \n",
+       "4               0.000590              -0.383791            -0.361878   \n",
+       "\n",
+       "   category_fraud_rate  state_fraud_rate  city_fraud_rate  night_amt  \\\n",
+       "0            -0.779142          -0.03321         0.007671  -0.213256   \n",
+       "1            -0.493928          -0.03321         0.007671  -0.213256   \n",
+       "2            -0.204031          -0.03321         0.007671  -0.213256   \n",
+       "3            -0.684808          -0.03321         0.007671  -0.213256   \n",
+       "4            -0.627098          -0.03321         0.007671  -0.213256   \n",
+       "\n",
+       "   distance_cust_merchant  \n",
+       "0               -1.388549  \n",
+       "1                0.259297  \n",
+       "2                1.621532  \n",
+       "3               -0.486863  \n",
+       "4               -1.090085  "
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "preview_cols = [col for col in [\n",
+    "    \"amt\",\n",
+    "    \"log_amt\",\n",
+    "    \"trans_hour\",\n",
+    "    \"trans_month\",\n",
+    "    \"is_night_transaction\",\n",
+    "    \"age\",\n",
+    "    \"prev_amt\",\n",
+    "    \"amt_change_from_prev\",\n",
+    "    \"amt_ratio_to_prev\",\n",
+    "    \"time_since_last_txn_sec\",\n",
+    "    \"cust_txn_count\",\n",
+    "    \"cust_avg_amt\",\n",
+    "    \"customer_txn_same_day\",\n",
+    "    \"customer_amt_same_day\",\n",
+    "    \"merchant_fraud_rate\",\n",
+    "    \"category_fraud_rate\",\n",
+    "    \"state_fraud_rate\",\n",
+    "    \"city_fraud_rate\",\n",
+    "    \"night_amt\",\n",
+    "    \"distance_cust_merchant\"\n",
+    "] if col in X_train_scaled.columns]\n",
+    "\n",
+    "display(X_train_scaled[preview_cols].head())\n",
+    "display(X_test_scaled[preview_cols].head())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3f7253d3",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009741,
+     "end_time": "2026-04-12T02:40:31.590005+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:31.580264+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "## 20. Export Processed Train and Test Datasets\n",
+    "\n",
+    "The final engineered datasets are saved separately so that Project 3 can load them directly for modeling."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "id": "764d6195",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-12T02:40:31.611377Z",
+     "iopub.status.busy": "2026-04-12T02:40:31.610705Z",
+     "iopub.status.idle": "2026-04-12T02:43:54.825601Z",
+     "shell.execute_reply": "2026-04-12T02:43:54.824425Z"
+    },
+    "papermill": {
+     "duration": 203.237785,
+     "end_time": "2026-04-12T02:43:54.837399+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:40:31.599614+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Saved files:\n",
+      "- fraud_train_features_project2.parquet\n",
+      "- fraud_test_features_project2.parquet\n",
+      "- fraud_train_features_project2.csv\n",
+      "- fraud_test_features_project2.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "train_processed = X_train_scaled.copy()\n",
+    "train_processed[target_col] = y_train.values\n",
+    "\n",
+    "test_processed = X_test_scaled.copy()\n",
+    "test_processed[target_col] = y_test.values\n",
+    "\n",
+    "train_processed.to_parquet(\"fraud_train_features_project2.parquet\", index=False)\n",
+    "test_processed.to_parquet(\"fraud_test_features_project2.parquet\", index=False)\n",
+    "\n",
+    "train_processed.to_csv(\"fraud_train_features_project2.csv\", index=False)\n",
+    "test_processed.to_csv(\"fraud_test_features_project2.csv\", index=False)\n",
+    "\n",
+    "print(\"Saved files:\")\n",
+    "print(\"- fraud_train_features_project2.parquet\")\n",
+    "print(\"- fraud_test_features_project2.parquet\")\n",
+    "print(\"- fraud_train_features_project2.csv\")\n",
+    "print(\"- fraud_test_features_project2.csv\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6933dbd1",
+   "metadata": {
+    "papermill": {
+     "duration": 0.010028,
+     "end_time": "2026-04-12T02:43:54.857363+00:00",
+     "exception": false,
+     "start_time": "2026-04-12T02:43:54.847335+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "# Conclusion\n",
+    "\n",
+    "Project 2 established the feature engineering backbone of the fraud detection pipeline in a train/test-safe manner.\n",
+    "\n",
+    "Rather than relying on raw variables alone, this notebook translated the transaction data into richer behavioral, contextual, temporal, and aggregation-based features. These engineered variables are expected to provide stronger fraud detection performance in the next stage of the project.\n",
+    "\n",
+    "This notebook also ensures methodological correctness by preventing leakage from the test set into the training pipeline. That makes the processed outputs suitable for rigorous modeling, threshold tuning, explainability, and later causal analysis."
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "databundleVersionId": 16008778,
+     "datasetId": 9682486,
+     "sourceId": 15121049,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 31328,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 268.676784,
+   "end_time": "2026-04-12T02:43:56.091403+00:00",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-04-12T02:39:27.414619+00:00",
+   "version": "2.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
