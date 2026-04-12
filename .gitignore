@@ -1,24 +1,33 @@
 # =========================
-# Python
+# PYTHON
 # =========================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.so
 *.py[cod]
 *$py.class
 
-# =========================
-# Testing / Coverage
-# =========================
-.pytest_cache/
-.coverage
-coverage.xml
-htmlcov/
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # =========================
-# Virtual Environments
+# VIRTUAL ENVIRONMENTS
 # =========================
 .venv/
 venv/
@@ -26,104 +35,112 @@ env/
 ENV/
 
 # =========================
-# Jupyter Notebooks
+# JUPYTER
 # =========================
 .ipynb_checkpoints/
+*.ipynb_checkpoints
 
 # =========================
-# Logs
+# DATA (DO NOT TRACK RAW OR GENERATED DATA)
 # =========================
+data/raw/
+data/interim/
+data/processed/
+
+# Optional: allow small sample datasets
+# !data/raw/sample.csv
+
+# =========================
+# MODEL FILES
+# =========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.onnx
+
+# =========================
+# ARTIFACTS / OUTPUTS
+# =========================
+artifacts/*
+!artifacts/.gitkeep
+
+# Reports (generated outputs)
+reports/figures/
+reports/tables/
+reports/*.pdf
+
+# =========================
+# SQL / DATABASE FILES
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+*.duckdb
+
+# Optional SQL outputs (generated CSVs)
+artifacts/sql_outputs/
+
+# =========================
+# LOGS
+# =========================
+logs/
 *.log
 
 # =========================
-# Environment Variables
+# CACHE / TEMP FILES
+# =========================
+.cache/
+.tmp/
+temp/
+*.tmp
+
+# =========================
+# ENVIRONMENT VARIABLES
 # =========================
 .env
 .env.*
 *.env
 
 # =========================
-# Data
+# KAGGLE / API KEYS
 # =========================
-data/raw/*.csv
-data/raw/*.zip
-data/raw/*.parquet
-
-data/processed/*.csv
-data/processed/*.parquet
-
-data/external/*
+kaggle.json
 
 # =========================
-# Model Artifacts
+# IDE / EDITOR FILES
 # =========================
-artifacts/*
-!artifacts/.gitkeep
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
 # =========================
-# Reports / Outputs
-# =========================
-reports/figures/
-reports/tables/
-reports/metrics/
-
-# =========================
-# Temporary Files
-# =========================
-*.tmp
-*.temp
-*.bak
-
-# =========================
-# OS Files
+# OS FILES
 # =========================
 .DS_Store
 Thumbs.db
 
 # =========================
-# IDE / Editor
+# PYTEST
 # =========================
-.vscode/
-.idea/
+.pytest_cache/
+coverage.xml
+htmlcov/
 
 # =========================
-# Docker / Build
+# MISC
 # =========================
-*.tar
-build/
-dist/
-*.egg-info/
-.eggs/
+*.bak
+*.swp
+*.swo
 
 # =========================
-# Cache
+# NOTEBOOK EXPORTS
 # =========================
-.cache/
+*.html
+*.pdf
 
 # =========================
-# Deployment
+# KEEP IMPORTANT STRUCTURE
 # =========================
-.env.local
-.env.production
-
-# =========================
-# Keep Folder Structure
-# =========================
-!data/raw/.gitkeep
-!data/processed/.gitkeep
 !artifacts/.gitkeep
-!reports/figures/.gitkeep
-!reports/metrics/.gitkeep
-!scripts/
-
-# Model binaries
-models/*.pkl
-models/*.joblib
-
-# DuckDB
-*.db
-*.duckdb
-
-# OS / editor
-.DS_Store
-.vscode/
