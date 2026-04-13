@@ -45,6 +45,18 @@ The project is intentionally organized as a sequence of notebooks so that each s
 
 ---
 
+## Key Results
+
+- ROC-AUC: **~0.98**
+- Precision (Fraud): **High**
+- Recall (Fraud Detection): **Optimized to reduce false negatives**
+- False Negatives: **343**
+- False Positives: **294**
+
+The final model achieves a strong balance between detecting fraudulent transactions and minimizing disruption to legitimate users.
+
+---
+
 ## Project Objectives
 
 - Perform high-quality exploratory data analysis on fraud transactions
