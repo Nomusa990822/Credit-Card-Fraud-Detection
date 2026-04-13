@@ -4,22 +4,18 @@
 
 A full end-to-end fraud analytics and machine learning project built entirely in notebooks, covering exploratory data analysis, feature engineering, predictive modeling, explainability, and causal inference.
 
-<p align="center">
-  <img src="https://img.shields.io/github/repo-size/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=github&color=0f172a" />
-  <img src="https://img.shields.io/github/languages/code-size/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=github&color=1d4ed8" />
-  <img src="https://img.shields.io/github/last-commit/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=git&color=0891b2" />
-  <img src="https://img.shields.io/github/commit-activity/m/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=github&color=0ea5e9" />
-</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/languages/count/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=github&color=155e75" />
-  <img src="https://img.shields.io/github/top-language/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=jupyter&color=0369a1" />
-  <img src="https://img.shields.io/github/issues/Nomusa990822/YOUR-EXACT-REPO-NAME?style=for-the-badge&logo=github&color=082f49" />
+  <img src="https://img.shields.io/github/issues-pr/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=082f49" />
+  <img src="https://img.shields.io/github/forks/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0f172a" />
+  <img src="https://img.shields.io/github/stars/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=1d4ed8" />
+  <img src="https://img.shields.io/github/watchers/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0891b2" />
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.x-0f172a?style=for-the-badge&logo=python" />
   <img src="https://img.shields.io/badge/Jupyter-Notebook-1d4ed8?style=for-the-badge&logo=jupyter" />
+  <img src="https://img.shields.io/badge/LaTeX-Report-0b7285?style=for-the-badge&logo=latex&logoColor=white" />
   <img src="https://img.shields.io/badge/Pandas-Data%20Analysis-0891b2?style=for-the-badge&logo=pandas" />
   <img src="https://img.shields.io/badge/Scikit--Learn-Modeling-0ea5e9?style=for-the-badge&logo=scikitlearn" />
   <img src="https://img.shields.io/badge/XGBoost-Optimization-155e75?style=for-the-badge" />
