@@ -328,7 +328,8 @@ flowchart TD
 ## Author
 
 **Nomusa Shongwe**
-Data Science | Machine Learning | Fraud Analytics | Explainable AI | Causal Inference
+
+_Data Science | Machine Learning | Fraud Analytics | Explainable AI | Causal Inference_
 
 ---
 
