@@ -2,67 +2,103 @@
 
 # Credit Card Fraud Detection
 
-A full end-to-end fraud analytics and machine learning project built entirely in notebooks, covering exploratory data analysis, feature engineering, predictive modeling, explainability, and causal inference.
+### From raw transactions to explainable, causally-informed fraud intelligence
 
+A full end-to-end fraud analytics and machine learning project built entirely in notebooks, covering exploratory data analysis, feature engineering, predictive modelling, explainability, and causal inference.
+
+<br/>
 
 <p align="center">
-  <img src="https://img.shields.io/github/issues-pr/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=082f49" />
-  <img src="https://img.shields.io/github/forks/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0f172a" />
-  <img src="https://img.shields.io/github/stars/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=1d4ed8" />
-  <img src="https://img.shields.io/github/watchers/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0891b2" />
+  <img alt="Open pull requests" src="https://img.shields.io/github/issues-pr/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=082f49" />
+  <img alt="Forks" src="https://img.shields.io/github/forks/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0f172a" />
+  <img alt="Stars" src="https://img.shields.io/github/stars/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=1d4ed8" />
+  <img alt="Watchers" src="https://img.shields.io/github/watchers/Nomusa990822/Credit-Card-Fraud-Detection?style=for-the-badge&logo=github&color=0891b2" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.x-0f172a?style=for-the-badge&logo=python" />
-  <img src="https://img.shields.io/badge/Jupyter-Notebook-1d4ed8?style=for-the-badge&logo=jupyter" />
-  <img src="https://img.shields.io/badge/LaTeX-Report-0b7285?style=for-the-badge&logo=latex&logoColor=white" />
-  <img src="https://img.shields.io/badge/Pandas-Data%20Analysis-0891b2?style=for-the-badge&logo=pandas" />
-  <img src="https://img.shields.io/badge/Scikit--Learn-Modeling-0ea5e9?style=for-the-badge&logo=scikitlearn" />
-  <img src="https://img.shields.io/badge/XGBoost-Optimization-155e75?style=for-the-badge" />
+  <img alt="Python 3.x" src="https://img.shields.io/badge/Python-3.x-0f172a?style=for-the-badge&logo=python" />
+  <img alt="Jupyter Notebook" src="https://img.shields.io/badge/Jupyter-Notebook-1d4ed8?style=for-the-badge&logo=jupyter" />
+  <img alt="LaTeX report" src="https://img.shields.io/badge/LaTeX-Report-0b7285?style=for-the-badge&logo=latex&logoColor=white" />
+  <img alt="Pandas data analysis" src="https://img.shields.io/badge/Pandas-Data%20Analysis-0891b2?style=for-the-badge&logo=pandas" />
+  <img alt="Scikit-learn modelling" src="https://img.shields.io/badge/Scikit--Learn-Modeling-0ea5e9?style=for-the-badge&logo=scikitlearn" />
+  <img alt="XGBoost optimisation" src="https://img.shields.io/badge/XGBoost-Optimization-155e75?style=for-the-badge" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/SHAP-Explainability-0369a1?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/DoubleML-Causal%20Inference-082f49?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Status-Notebook%20Pipeline-0f172a?style=for-the-badge" />
+  <img alt="SHAP explainability" src="https://img.shields.io/badge/SHAP-Explainability-0369a1?style=for-the-badge" />
+  <img alt="DoubleML causal inference" src="https://img.shields.io/badge/DoubleML-Causal%20Inference-082f49?style=for-the-badge" />
+  <img alt="Status: notebook pipeline" src="https://img.shields.io/badge/Status-Notebook%20Pipeline-0f172a?style=for-the-badge" />
 </p>
+
+[**Results**](#key-results) · [**Pipeline**](#notebook-pipeline) · [**Architecture**](#architecture) · [**Methods**](#core-methods) · [**Explainability**](#explainability-logic) · [**Causal Inference**](#causal-inference-logic) · [**Roadmap**](#future-improvements)
 
 </div>
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Results](#key-results)
+- [Project Objectives](#project-objectives)
+- [Notebook Pipeline](#notebook-pipeline)
+- [Repository Structure](#repository-structure)
+- [Architecture](#architecture)
+- [Core Methods](#core-methods)
+- [Key Project Highlights](#key-project-highlights)
+- [Recommended Reading Order](#recommended-reading-order)
+- [Analytical Questions Answered](#analytical-questions-answered)
+- [Technical Themes Demonstrated](#technical-themes-demonstrated)
+- [Modelling Decision Pipeline](#modelling-decision-pipeline)
+- [Explainability Logic](#explainability-logic)
+- [Causal Inference Logic](#causal-inference-logic)
+- [Project Deliverables](#project-deliverables)
+- [Future Improvements](#future-improvements)
+- [Author](#author)
+- [License](#license)
+
+---
+
 ## Overview
 
-This repository presents a notebook-based fraud detection pipeline built on a large credit card transaction dataset. The project was designed to move beyond basic classification and develop a more complete analytics workflow that answers five major questions:
+This repository presents a notebook-based fraud detection pipeline built on a large credit card transaction dataset. It goes beyond basic classification to deliver a complete analytics workflow that answers five questions:
 
-1. What patterns define fraudulent behavior in the raw data?
-2. Which engineered features improve fraud detection most?
-3. Which predictive models perform best on an imbalanced classification problem?
-4. Why does the final model make the decisions it makes?
-5. Which important variables are merely predictive, and which show evidence of causal influence?
+| # | Question |
+|:---:|---|
+| **1** | What patterns define fraudulent behaviour in the raw data? |
+| **2** | Which engineered features improve fraud detection most? |
+| **3** | Which predictive models perform best on an imbalanced classification problem? |
+| **4** | Why does the final model make the decisions it makes? |
+| **5** | Which important variables are merely predictive, and which show evidence of causal influence? |
 
-The project is intentionally organized as a sequence of notebooks so that each stage is transparent, reproducible, and easy to review.
+The project is organised as a sequence of notebooks so that each stage is transparent, reproducible, and easy to review.
 
 ---
 
 ## Key Results
 
-- ROC-AUC: **~0.98**
-- Precision (Fraud): **High**
-- Recall (Fraud Detection): **Optimized to reduce false negatives**
-- False Negatives: **343**
-- False Positives: **294**
+<div align="center">
 
-The final model achieves a strong balance between detecting fraudulent transactions and minimizing disruption to legitimate users.
+| Metric | Result |
+|---|:---:|
+| **ROC-AUC** | **~0.98** |
+| **Precision (fraud)** | High |
+| **Recall (fraud detection)** | Optimised to reduce false negatives |
+| **False negatives** (missed fraud) | **343** |
+| **False positives** (legitimate transactions flagged) | **294** |
+
+</div>
+
+The final model strikes a strong balance between detecting fraudulent transactions and minimising disruption to legitimate customers. The decision threshold is tuned for the precision-recall trade-off rather than left at the default cutoff.
 
 ---
 
 ## Project Objectives
 
 - Perform high-quality exploratory data analysis on fraud transactions
-- Build strong fraud-relevant engineered features
+- Build strong, fraud-relevant engineered features
 - Train and compare multiple machine learning models
-- Optimize the best model for precision-recall trade-offs
+- Optimise the best model for precision-recall trade-offs
 - Explain predictions globally and locally using SHAP
 - Extend the project beyond prediction into causal analysis with Double Machine Learning
 
@@ -70,20 +106,13 @@ The final model achieves a strong balance between detecting fraudulent transacti
 
 ## Notebook Pipeline
 
-**1. `01_eda.ipynb`**
-Exploratory data analysis focused on understanding transaction behavior, class imbalance, temporal risk patterns, geographic fraud concentration, category-level behavior, demographic trends, and core fraud signals.
-
-**2. `02_feature_engineering.ipynb`**
-Feature engineering notebook that transforms raw transactional data into a richer modeling dataset, including behavioral, temporal, customer-level, merchant-level, location-level, and category-based risk features.
-
-**3. `03_modeling_and_optimization.ipynb`**
-Model development notebook where baseline models are trained, tuned, evaluated, compared, and optimized for the fraud detection objective.
-
-**4. `04_explainability.ipynb`**
-Explainability notebook that uses SHAP and error analysis to understand global feature importance, local decision patterns, false positives, false negatives, and probability behavior around the final threshold.
-
-**5. `05_doubleML.ipynb`**
-Causal analysis notebook that applies Double Machine Learning to estimate the causal impact of selected high-value fraud-related features.
+| Stage | Notebook | Focus |
+|:---:|---|---|
+| **1** | [`01_eda.ipynb`](01_eda.ipynb) | Transaction behaviour, class imbalance, temporal risk patterns, geographic fraud concentration, category-level behaviour, demographic trends, and core fraud signals |
+| **2** | [`02_feature_engineering.ipynb`](02_feature_engineering.ipynb) | Turns raw transactions into a richer modelling dataset: behavioural, temporal, customer-level, merchant-level, location-level and category-based risk features |
+| **3** | [`03_modeling_and_optimization.ipynb`](03_modeling_and_optimization.ipynb) | Baseline models trained, tuned, evaluated, compared and optimised for the fraud detection objective |
+| **4** | [`04_explainability.ipynb`](04_explainability.ipynb) | SHAP and error analysis: global feature importance, local decision patterns, false positives, false negatives, and probability behaviour around the final threshold |
+| **5** | [`05_doubleML.ipynb`](05_doubleML.ipynb) | Double Machine Learning to estimate the causal impact of selected high-value fraud-related features |
 
 ---
 
@@ -100,129 +129,116 @@ Credit-Card-Fraud-Detection/
 ├── requirements.txt
 └── README.md
 ```
+
 ---
 
-## End-to-End Workflow
+## Architecture
+
+### End-to-end workflow
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 36, "rankSpacing": 44, "htmlLabels": true }
+}}%%
 flowchart TD
-    A[Raw Fraud Dataset] --> B[01 EDA]
-    B --> C[Fraud Pattern Discovery]
-    C --> D[02 Feature Engineering]
-    D --> E[Engineered Training and Test Features]
-    E --> F[03 Modeling and Optimization]
-    F --> G[Baseline Models]
-    G --> H[Tuned Final Model]
-    H --> I[04 Explainability]
-    I --> J[SHAP Global and Local Explanations]
-    I --> K[Error Analysis]
-    H --> L[05 DoubleML]
-    L --> M[Causal Effect Estimation]
-```
----
+    RAW[("<b>Raw Fraud Dataset</b>")]
+    N1["<b>01 · EDA</b><br/>Fraud pattern discovery"]
+    N2["<b>02 · Feature Engineering</b><br/>Engineered training and test sets"]
+    N3["<b>03 · Modelling &amp; Optimisation</b><br/>Baselines → tuned final model"]
+    N4["<b>04 · Explainability</b>"]
+    N5["<b>05 · DoubleML</b><br/>Causal effect estimation"]
+    SHAP["<b>SHAP</b><br/>Global and local explanations"]
+    ERR["<b>Error Analysis</b><br/>False positives and false negatives"]
 
-## System Architecture
+    RAW --> N1 --> N2 --> N3 --> N4
+    N4 --> SHAP
+    N4 --> ERR
+    N2 --> N5
+    N4 -. "informs treatment selection" .-> N5
+
+    classDef data   fill:#0f172a,stroke:#0f172a,color:#ffffff;
+    classDef stage  fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0f172a;
+    classDef causal fill:#cffafe,stroke:#0891b2,stroke-width:1.5px,color:#0f172a;
+    classDef out    fill:#f1f5f9,stroke:#475569,stroke-width:1.5px,color:#0f172a;
+    class RAW data;
+    class N1,N2,N3,N4 stage;
+    class N5 causal;
+    class SHAP,ERR out;
+    linkStyle default stroke:#475569,stroke-width:1.6px
+```
+
+### System layers
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 30, "rankSpacing": 50, "htmlLabels": true }
+}}%%
 flowchart LR
-    A[Raw Transaction Data] --> B[EDA Layer]
-    B --> C[Feature Engineering Layer]
-    C --> D[Modeling Layer]
-    D --> E[Optimization Layer]
-    E --> F[Explainability Layer]
-    E --> G[Causal Inference Layer]
+    RAW[("<b>Raw Transaction<br/>Data</b>")] --> EDA["<b>EDA<br/>Layer</b>"]
+    EDA --> FE["<b>Feature Engineering<br/>Layer</b>"]
+    FE --> MOD["<b>Modelling<br/>Layer</b>"]
+    MOD --> OPT["<b>Optimisation<br/>Layer</b>"]
+    OPT --> XAI["<b>Explainability<br/>Layer</b>"]
+    OPT --> CAUSAL["<b>Causal Inference<br/>Layer</b>"]
 
-    C1[Temporal Features]
-    C2[Behavioral Features]
-    C3[Customer Aggregates]
-    C4[Merchant Risk Features]
-    C5[Category Risk Features]
-    C6[Geographic Risk Features]
+    subgraph FEAT["&nbsp;ENGINEERED FEATURE FAMILIES&nbsp;"]
+        direction TB
+        C1["Temporal"]
+        C2["Behavioural"]
+        C3["Customer aggregates"]
+        C4["Merchant risk"]
+        C5["Category risk"]
+        C6["Geographic risk"]
+    end
+    FE -.-> FEAT
 
-    C --> C1
-    C --> C2
-    C --> C3
-    C --> C4
-    C --> C5
-    C --> C6
+    classDef data  fill:#0f172a,stroke:#0f172a,color:#ffffff;
+    classDef layer fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0f172a;
+    classDef xai   fill:#cffafe,stroke:#0891b2,stroke-width:1.5px,color:#0f172a;
+    classDef feat  fill:#f8fafc,stroke:#94a3b8,color:#0f172a;
+    class RAW data;
+    class EDA,FE,MOD,OPT layer;
+    class XAI,CAUSAL xai;
+    class C1,C2,C3,C4,C5,C6 feat;
+    style FEAT fill:#ffffff,stroke:#0891b2,stroke-width:1.5px,stroke-dasharray: 6 4
+    linkStyle default stroke:#475569,stroke-width:1.6px
 ```
 
 ---
 
-## Notebook Dependency Map
+## Core Methods
 
-```mermaid 
-graph TD
-    N1[01 EDA] --> N2[02 Feature Engineering]
-    N2 --> N3[03 Modeling and Optimization]
-    N3 --> N4[04 Explainability]
-    N2 --> N5[05 DoubleML]
-```
-
----
-
-## Core Methods Used
-
-**1. Exploratory Data Analysis**
-
-- Class balance analysis
-- Distribution analysis
-- Log-transformed amount analysis
-- Temporal fraud profiling
-- State and city concentration analysis
-- Category and gender comparisons
-- Geographic plotting
-- Correlation analysis
-
-**2. Feature Engineering**
-
-- Transaction amount transformations
-- High-value transaction flags
-- Customer historical aggregates
-- Same-day transaction behavior
-- Merchant risk statistics
-- Category-level fraud context
-- Geographic risk summaries
-- Night transaction behavior
-- Age band and population band indicators
-
-**3. Predictive Modeling**
-
-- Logistic Regression
-- Random Forest
-- XGBoost
-
-**4. Model Optimization**
-
-- Hyperparameter tuning
-- Threshold optimization
-- Precision-recall trade-off analysis
-- Final model comparison
-
-**5. Explainability**
-
-- Global feature importance
-- SHAP summary plots
-- SHAP dependence analysis
-- High-risk and low-risk local case analysis
-- False positive and false negative profiling
-
-**6. Causal Analysis**
-
-- Double Machine Learning
-- Partially Linear Regression framework
-- Multiple feature causal effect estimation
+| Area | Techniques |
+|---|---|
+| **1. Exploratory Data Analysis** | Class balance analysis · distribution analysis · log-transformed amount analysis · temporal fraud profiling · state and city concentration · category and gender comparisons · geographic plotting · correlation analysis |
+| **2. Feature Engineering** | Transaction amount transformations · high-value transaction flags · customer historical aggregates · same-day transaction behaviour · merchant risk statistics · category-level fraud context · geographic risk summaries · night transaction behaviour · age band and population band indicators |
+| **3. Predictive Modelling** | Logistic Regression · Random Forest · XGBoost |
+| **4. Model Optimisation** | Hyperparameter tuning · threshold optimisation · precision-recall trade-off analysis · final model comparison |
+| **5. Explainability** | Global feature importance · SHAP summary plots · SHAP dependence analysis · high-risk and low-risk local case analysis · false positive and false negative profiling |
+| **6. Causal Analysis** | Double Machine Learning · Partially Linear Regression (PLR) framework · multi-feature causal effect estimation |
 
 ---
 
 ## Key Project Highlights
 
-* Handles an extreme class imbalance problem in a principled way
-* Uses fraud-sensitive metrics such as Precision, Recall, F1-score, ROC-AUC, and PR-AUC
-* Moves from descriptive analysis to predictive modeling to causal interpretation
-* Demonstrates both model performance and model transparency
-* Includes threshold tuning instead of relying on default classification cutoffs
-* Distinguishes between predictive importance and causal relevance
+- Handles an **extreme class imbalance** problem in a principled way
+- Uses **fraud-sensitive metrics**: Precision, Recall, F1-score, ROC-AUC and PR-AUC
+- Moves from **descriptive analysis** to **predictive modelling** to **causal interpretation**
+- Demonstrates both **model performance** and **model transparency**
+- Includes **threshold tuning** instead of relying on default classification cutoffs
+- Distinguishes between **predictive importance** and **causal relevance**
 
 ---
 
@@ -230,85 +246,150 @@ graph TD
 
 For the clearest understanding of the project, review the notebooks in this order:
 
-- ```01_eda.ipynb```
-- ```02_feature_engineering.ipynb```
-- ```03_modeling_and_optimization.ipynb```
-- ```04_explainability.ipynb```
-- ```05_doubleML.ipynb```
+1. [`01_eda.ipynb`](01_eda.ipynb)
+2. [`02_feature_engineering.ipynb`](02_feature_engineering.ipynb)
+3. [`03_modeling_and_optimization.ipynb`](03_modeling_and_optimization.ipynb)
+4. [`04_explainability.ipynb`](04_explainability.ipynb)
+5. [`05_doubleML.ipynb`](05_doubleML.ipynb)
 
 ---
 
-## Example Analytical Questions Answered
-* Which transaction patterns are most associated with fraud?
-* How does fraud risk vary across hours, days, and months?
-* Which states, cities, and categories are most exposed?
-* Which engineered features matter most for model performance?
-* Which model offers the strongest precision-recall balance?
-* What kinds of transactions become false positives and false negatives?
-* Which top predictive drivers also show evidence of causal importance?
+## Analytical Questions Answered
+
+- Which transaction patterns are most associated with fraud?
+- How does fraud risk vary across hours, days and months?
+- Which states, cities and categories are most exposed?
+- Which engineered features matter most for model performance?
+- Which model offers the strongest precision-recall balance?
+- What kinds of transactions become false positives and false negatives?
+- Which top predictive drivers also show evidence of causal importance?
 
 ---
+
 ## Technical Themes Demonstrated
 
-* Large-scale tabular fraud analytics
-* Imbalanced binary classification
-* Feature engineering for behavioral risk
-* Interpretable machine learning
-* Threshold optimization
-* Error analysis
-* Causal machine learning
+| | |
+|---|---|
+| Large-scale tabular fraud analytics | Imbalanced binary classification |
+| Feature engineering for behavioural risk | Interpretable machine learning |
+| Threshold optimisation | Error analysis |
+| Causal machine learning | |
 
 ---
 
-## Modeling Decision Pipeline
+## Modelling Decision Pipeline
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 36, "rankSpacing": 40, "htmlLabels": true }
+}}%%
 flowchart TD
-    A[Engineered Features] --> B[Baseline Models]
-    B --> C[Metric Comparison]
-    C --> D[Best Candidate Selection]
-    D --> E[Hyperparameter Tuning]
-    E --> F[Threshold Search]
-    F --> G[Final Optimized Model]
-    G --> H[Explainability]
-    G --> I[Business Interpretation]
+    A["<b>Engineered Features</b>"] --> B["<b>Baseline Models</b><br/>Logistic Regression · Random Forest · XGBoost"]
+    B --> C["<b>Metric Comparison</b>"]
+    C --> D["<b>Best Candidate Selection</b>"]
+    D --> E["<b>Hyperparameter Tuning</b>"]
+    E --> F["<b>Threshold Search</b>"]
+    F --> G["<b>Final Optimised Model</b>"]
+    G --> H["<b>Explainability</b>"]
+    G --> I["<b>Business Interpretation</b>"]
+
+    classDef input fill:#0f172a,stroke:#0f172a,color:#ffffff;
+    classDef step  fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0f172a;
+    classDef final fill:#cffafe,stroke:#0891b2,stroke-width:2.5px,color:#0f172a;
+    classDef out   fill:#f1f5f9,stroke:#475569,stroke-width:1.5px,color:#0f172a;
+    class A input;
+    class B,C,D,E,F step;
+    class G final;
+    class H,I out;
+    linkStyle default stroke:#475569,stroke-width:1.6px
 ```
 
 ---
 
 ## Explainability Logic
 
-```mermaid 
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 28, "rankSpacing": 44, "htmlLabels": true }
+}}%%
 flowchart TD
-    A[Final Optimized Model] --> B[Global SHAP Importance]
-    A --> C[Local SHAP Explanations]
-    A --> D[Prediction Probability Analysis]
-    A --> E[False Negative Analysis]
-    A --> F[False Positive Analysis]
-    B --> G[Most Influential Features]
-    C --> H[Case-Level Decision Drivers]
-    D --> I[Threshold Separation]
-    E --> J[Missed Fraud Pattern]
-    F --> K[Over-Flagged Legitimate Pattern]
+    M["<b>Final Optimised Model</b>"]
+
+    M --> B["<b>Global SHAP<br/>Importance</b>"]
+    M --> C["<b>Local SHAP<br/>Explanations</b>"]
+    M --> D["<b>Prediction Probability<br/>Analysis</b>"]
+    M --> E["<b>False Negative<br/>Analysis</b>"]
+    M --> F["<b>False Positive<br/>Analysis</b>"]
+
+    B --> G["<b>Most Influential<br/>Features</b>"]
+    C --> H["<b>Case-Level<br/>Decision Drivers</b>"]
+    D --> I["<b>Threshold<br/>Separation</b>"]
+    E --> J["<b>Missed Fraud<br/>Patterns</b>"]
+    F --> K["<b>Over-Flagged Legitimate<br/>Patterns</b>"]
+
+    classDef model fill:#0f172a,stroke:#0f172a,color:#ffffff;
+    classDef xai   fill:#e0f2fe,stroke:#0369a1,stroke-width:1.5px,color:#0f172a;
+    classDef err   fill:#fee2e2,stroke:#dc2626,stroke-width:1.5px,color:#0f172a;
+    classDef out   fill:#f1f5f9,stroke:#475569,stroke-width:1.5px,color:#0f172a;
+    class M model;
+    class B,C,D xai;
+    class E,F err;
+    class G,H,I,J,K out;
+    linkStyle default stroke:#475569,stroke-width:1.6px
 ```
+
 ---
 
 ## Causal Inference Logic
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Helvetica, Arial, sans-serif",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 36, "rankSpacing": 40, "htmlLabels": true }
+}}%%
 flowchart TD
-    A[Top Predictive Features from SHAP] --> B[Select Candidate Treatments]
-    B --> C[DoubleML PLR Framework]
-    C --> D[Control for High-Dimensional Confounders]
-    D --> E[Estimate Causal Effect]
-    E --> F[Compare Predictive Importance vs Causal Influence]
+    A["<b>Top Predictive Features<br/>from SHAP</b>"] --> B["<b>Select Candidate<br/>Treatments</b>"]
+    B --> C["<b>DoubleML<br/>PLR Framework</b>"]
+    C --> D["<b>Control for High-Dimensional<br/>Confounders</b>"]
+    D --> E["<b>Estimate<br/>Causal Effect</b>"]
+    E --> F["<b>Compare Predictive Importance<br/>vs Causal Influence</b>"]
+
+    classDef start fill:#0f172a,stroke:#0f172a,color:#ffffff;
+    classDef step  fill:#cffafe,stroke:#0891b2,stroke-width:1.5px,color:#0f172a;
+    classDef end_  fill:#e0f2fe,stroke:#0369a1,stroke-width:2.5px,color:#0f172a;
+    class A start;
+    class B,C,D,E step;
+    class F end_;
+    linkStyle default stroke:#475569,stroke-width:1.6px
 ```
+
+> [!NOTE]
+> Causal estimates from Double Machine Learning depend on the framework's identification assumptions, such as having controlled for the relevant confounders. Treat them as evidence of causal influence, not proof.
+
 ---
 
 ## Project Deliverables
+
 - A structured five-notebook fraud pipeline
-- Engineered modeling datasets
-- Baseline and optimized classification models
+- Engineered modelling datasets
+- Baseline and optimised classification models
 - Explainability analysis of the final model
 - Causal effect estimates for selected fraud drivers
 
@@ -316,12 +397,12 @@ flowchart TD
 
 ## Future Improvements
 
-* Sequence modeling for transaction history
-* Graph-based fraud detection
-* Real-time scoring simulation
-* Calibration diagnostics
-* Drift monitoring across time periods
-* Advanced uplift or treatment heterogeneity analysis
+- [ ] Sequence modelling for transaction history
+- [ ] Graph-based fraud detection
+- [ ] Real-time scoring simulation
+- [ ] Calibration diagnostics
+- [ ] Drift monitoring across time periods
+- [ ] Advanced uplift or treatment-heterogeneity analysis
 
 ---
 
@@ -329,9 +410,16 @@ flowchart TD
 
 **Nomusa Shongwe**
 
-_Data Science | Machine Learning | Fraud Analytics | Explainable AI | Causal Inference_
+*Data Science · Machine Learning · Fraud Analytics · Explainable AI · Causal Inference*
 
 ---
 
 ## License
+
 This project is released under the MIT License.
+
+<div align="center">
+
+<sub>[Back to top](#credit-card-fraud-detection)</sub>
+
+</div>
